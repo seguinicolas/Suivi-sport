@@ -1,0 +1,1778 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Mon Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg:       #07070F;
+    --bg2:      #0F0F1A;
+    --bg3:      #15151F;
+    --border:   #1E1E2E;
+    --border2:  #2A2A3E;
+    --text:     #F0F0F5;
+    --text2:    #9090A8;
+    --text3:    #555566;
+    --green:    #00E5A0;
+    --orange:   #FF6B35;
+    --blue:     #4ECDC4;
+    --red:      #FF4757;
+    --yellow:   #FFD700;
+    --purple:   #A855F7;
+    --font-title:'Syne', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --radius:   16px;
+    --radius-sm:10px;
+  }
+  html, body { background:var(--bg); color:var(--text); font-family:var(--font-mono); min-height:100vh; overflow-x:hidden; }
+
+  /* TOPBAR */
+  .topbar { position:fixed; top:0; left:0; right:0; height:60px; background:rgba(7,7,15,0.92); backdrop-filter:blur(16px); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 20px; z-index:1000; }
+  .topbar-title { font-family:var(--font-title); font-size:18px; font-weight:800; background:linear-gradient(135deg,var(--green),var(--blue)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .hamburger { width:40px; height:40px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:5px; cursor:pointer; border:1px solid var(--border2); border-radius:var(--radius-sm); background:var(--bg3); transition:all .2s; }
+  .hamburger:hover { border-color:var(--green); }
+  .hamburger span { display:block; width:18px; height:2px; background:var(--text); border-radius:2px; transition:all .3s; }
+  .hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+  .hamburger.open span:nth-child(2) { opacity:0; }
+  .hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+
+  /* MENU */
+  .menu-overlay { position:fixed; inset:0; background:rgba(0,0,0,0); z-index:900; pointer-events:none; transition:background .3s; }
+  .menu-overlay.open { background:rgba(0,0,0,0.7); pointer-events:all; }
+  .menu-drawer { position:fixed; top:0; right:-300px; width:280px; height:100vh; background:var(--bg2); border-left:1px solid var(--border); z-index:950; transition:right .3s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column; padding:0 0 40px; overflow-y:auto; }
+  .menu-drawer.open { right:0; }
+  .menu-header { padding:70px 24px 24px; border-bottom:1px solid var(--border); margin-bottom:8px; }
+  .menu-header-label { font-size:10px; color:var(--text3); letter-spacing:3px; text-transform:uppercase; margin-bottom:6px; }
+  .menu-header-name { font-family:var(--font-title); font-size:22px; font-weight:800; background:linear-gradient(135deg,var(--green),var(--blue)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .menu-section-label { font-size:9px; color:var(--text3); letter-spacing:3px; text-transform:uppercase; padding:16px 24px 8px; }
+  .menu-item { display:flex; align-items:center; gap:14px; padding:13px 24px; cursor:pointer; transition:all .15s; border-left:3px solid transparent; color:var(--text2); }
+  .menu-item:hover { background:var(--bg3); color:var(--text); }
+  .menu-item.active { border-left-color:var(--green); background:rgba(0,229,160,0.06); color:var(--green); }
+  .menu-item-icon { font-size:18px; width:28px; text-align:center; }
+  .menu-item-text { font-family:var(--font-title); font-size:15px; font-weight:600; }
+  .menu-item-badge { margin-left:auto; font-size:9px; padding:3px 8px; border-radius:20px; font-weight:600; }
+  .badge-soon { background:rgba(255,107,53,0.15); color:var(--orange); }
+  .menu-divider { height:1px; background:var(--border); margin:8px 24px; }
+
+  /* PAGES */
+  .main { padding-top:60px; min-height:100vh; }
+  .page { display:none; padding:24px 20px 100px; animation:fadeIn .2s ease; }
+  .page.active { display:block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  /* PAGE HEADER */
+  .page-header { margin-bottom:24px; }
+  .page-label { font-size:10px; color:var(--text3); letter-spacing:3px; text-transform:uppercase; margin-bottom:4px; }
+  .page-title { font-family:var(--font-title); font-size:28px; font-weight:800; letter-spacing:-1px; }
+  .page-subtitle { font-size:12px; color:var(--text3); margin-top:6px; }
+
+  /* CARDS */
+  .card { background:var(--bg3); border-radius:var(--radius); border:1px solid var(--border); padding:18px; margin-bottom:14px; }
+  .card-title { font-size:10px; color:var(--text3); letter-spacing:2px; text-transform:uppercase; margin-bottom:14px; }
+
+  /* STATS */
+  .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+  .stats-grid-2 { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px; }
+  .stat-card { background:var(--bg3); border-radius:var(--radius); border:1px solid var(--border); padding:14px 12px; }
+  .stat-label { font-size:9px; color:var(--text3); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; }
+  .stat-value { font-family:'Georgia', serif; font-size:24px; font-weight:700; letter-spacing:0; }
+  .stat-unit { font-size:10px; color:var(--text3); margin-top:2px; }
+
+  /* ACTIVITY CARDS */
+  .activity-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px; }
+  .activity-card { background:var(--bg3); border-radius:var(--radius); border:1px solid var(--border); padding:16px; cursor:pointer; transition:all .2s; position:relative; overflow:hidden; }
+  .activity-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+  .activity-card.velo::before    { background:var(--orange); }
+  .activity-card.course::before  { background:var(--green); }
+  .activity-card.autre::before   { background:var(--blue); }
+  .activity-card.poids::before   { background:var(--yellow); }
+  .activity-card:hover { border-color:var(--border2); transform:translateY(-2px); }
+  .activity-icon { font-size:26px; margin-bottom:10px; }
+  .activity-name { font-family:var(--font-title); font-size:14px; font-weight:700; margin-bottom:4px; }
+  .activity-stat { font-size:11px; color:var(--text3); }
+
+  /* SUB TABS */
+  .sub-tabs { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; margin-bottom:16px; padding-bottom:2px; }
+  .sub-tabs::-webkit-scrollbar { display:none; }
+  .sub-tab { flex-shrink:0; padding:7px 16px; border:1.5px solid var(--border); border-radius:20px; font-size:12px; font-weight:600; color:var(--text3); cursor:pointer; transition:all .2s; background:transparent; font-family:var(--font-mono); }
+  .sub-tab.active { border-color:var(--green); color:var(--green); background:rgba(0,229,160,0.08); }
+
+  /* SESSIONS */
+  .session-item { background:var(--bg3); border-radius:var(--radius); border:1px solid var(--border); padding:14px 16px; margin-bottom:10px; display:flex; align-items:center; gap:12px; }
+  .session-emoji { font-size:20px; background:var(--bg); border-radius:var(--radius-sm); width:44px; height:44px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .session-info { flex:1; min-width:0; }
+  .session-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+  .session-name { font-family:var(--font-title); font-size:14px; font-weight:700; }
+  .session-badge { font-size:9px; padding:3px 8px; border-radius:10px; font-weight:600; }
+  .badge-velo   { background:rgba(255,107,53,0.15); color:var(--orange); }
+  .badge-course { background:rgba(0,229,160,0.15);  color:var(--green); }
+  .badge-autre  { background:rgba(78,205,196,0.15); color:var(--blue); }
+  .session-date { font-size:11px; color:var(--text3); }
+  .session-stats { display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
+  .session-km   { font-size:12px; color:var(--green); font-weight:600; }
+  .session-meta { font-size:12px; color:var(--text3); }
+
+  /* OBJECTIFS */
+  .obj-row { margin-bottom:16px; }
+  .obj-row:last-child { margin-bottom:0; }
+  .obj-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:7px; }
+  .obj-name { font-size:13px; color:var(--text2); }
+  .obj-val { font-size:12px; font-weight:700; }
+  .progress-bg { background:var(--bg); border-radius:6px; height:5px; overflow:hidden; }
+  .progress-bar { height:100%; border-radius:6px; transition:width .8s ease; }
+
+  /* LOADING */
+  .loading { text-align:center; padding:30px; color:var(--text3); font-size:13px; }
+  .spinner { display:inline-block; width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--green); border-radius:50%; animation:spin .8s linear infinite; margin-bottom:10px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* POIDS */
+  .poids-display { text-align:center; padding:20px 0; }
+  .poids-current { font-family:var(--font-title); font-size:56px; font-weight:800; color:var(--yellow); letter-spacing:-2px; }
+  .poids-unit { font-size:20px; color:var(--text3); }
+  .poids-date { font-size:12px; color:var(--text3); margin-top:4px; }
+  .poids-diff { font-size:14px; font-weight:700; margin-top:8px; }
+  .poids-diff.down { color:var(--green); }
+  .poids-diff.up   { color:var(--red); }
+
+  /* COMING SOON */
+  .coming-soon { text-align:center; padding:60px 20px; }
+  .coming-soon-icon { font-size:48px; margin-bottom:16px; }
+  .coming-soon-title { font-family:var(--font-title); font-size:20px; font-weight:800; margin-bottom:8px; }
+  .coming-soon-text { font-size:13px; color:var(--text3); line-height:1.6; }
+
+  /* BOUTON FLOTTANT */
+  .btn-add-float { position:fixed; bottom:28px; right:20px; background:var(--green); color:var(--bg); border:none; border-radius:50px; padding:14px 22px; font-family:var(--font-title); font-size:14px; font-weight:700; cursor:pointer; box-shadow:0 8px 24px rgba(0,229,160,0.3); transition:all .2s; z-index:100; display:flex; align-items:center; gap:8px; }
+  .btn-add-float:hover { transform:translateY(-2px); box-shadow:0 12px 32px rgba(0,229,160,0.4); }
+
+  /* MODAL */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.85); display:none; align-items:flex-end; z-index:2000; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--bg2); width:100%; border-radius:24px 24px 0 0; padding:28px 24px 40px; border:1px solid var(--border); max-height:90vh; overflow-y:auto; }
+  .modal-handle { width:36px; height:4px; background:var(--border2); border-radius:2px; margin:0 auto 20px; }
+  .modal-title { font-family:var(--font-title); font-size:18px; font-weight:800; margin-bottom:20px; }
+  .field { margin-bottom:14px; }
+  .field-label { font-size:10px; color:var(--text3); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:6px; display:block; }
+  .field input, .field select { width:100%; background:var(--bg); border:1px solid var(--border2); border-radius:var(--radius-sm); padding:11px 14px; color:var(--text); font-family:var(--font-mono); font-size:14px; outline:none; transition:border-color .2s; }
+  .field input:focus, .field select:focus { border-color:var(--green); }
+  .field select option { background:var(--bg); }
+  .fields-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .btn-primary { width:100%; padding:15px; background:var(--green); color:var(--bg); border:none; border-radius:var(--radius); font-family:var(--font-title); font-size:15px; font-weight:700; cursor:pointer; margin-top:8px; }
+  .btn-secondary { width:100%; padding:13px; background:transparent; color:var(--text3); border:1px solid var(--border2); border-radius:var(--radius); font-family:var(--font-mono); font-size:14px; cursor:pointer; margin-top:8px; }
+
+  canvas { max-height:130px !important; }
+  #chartPoids { max-height:280px !important; min-height:240px; }
+  #chartMuscu { max-height:220px !important; min-height:180px; }
+  .year-btn { padding:8px 18px; border:1.5px solid var(--border); border-radius:20px; font-size:13px; font-weight:700; color:var(--text3); cursor:pointer; background:transparent; font-family:var(--font-title); transition:all .2s; }
+  .year-btn:hover { border-color:var(--green); color:var(--text); }
+  .year-btn.active { border-color:var(--green); color:var(--green); background:rgba(0,229,160,0.1); }
+  .poids-period-btn { padding:5px 12px; border:1.5px solid var(--border); border-radius:20px; font-size:11px; font-weight:700; color:var(--text3); cursor:pointer; background:transparent; font-family:var(--font-mono); transition:all .2s; }
+  .poids-period-btn.active { border-color:var(--yellow); color:var(--yellow); background:rgba(255,215,0,0.08); }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-title">Mon Suivi Sport</div>
+  <div class="hamburger" id="hamburger" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+
+<!-- MENU -->
+<div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+<div class="menu-drawer" id="menuDrawer">
+  <div class="menu-header">
+    <div class="menu-header-label">Navigation</div>
+    <div class="menu-header-name">Mon Suivi Sport</div>
+  </div>
+  <div class="menu-section-label">Vue d'ensemble</div>
+  <div class="menu-item active" onclick="naviguer('general',this)"><span class="menu-item-icon">🏠</span><span class="menu-item-text">Général</span></div>
+  <div class="menu-section-label">Sport</div>
+  <div class="menu-item" onclick="naviguer('velo',this)"><span class="menu-item-icon">🚴</span><span class="menu-item-text">Vélo</span></div>
+  <div class="menu-item" onclick="naviguer('course',this)"><span class="menu-item-icon">🏃</span><span class="menu-item-text">Course</span></div>
+  <div class="menu-item" onclick="naviguer('autre',this)"><span class="menu-item-icon">🏋️</span><span class="menu-item-text">Autre</span></div>
+  <div class="menu-item" onclick="naviguer('musculation',this)"><span class="menu-item-icon">💪</span><span class="menu-item-text">Musculation</span></div>
+  <div class="menu-item" onclick="naviguer('bilan',this)"><span class="menu-item-icon">📋</span><span class="menu-item-text">Bilan Musculation</span></div>
+  <div class="menu-divider"></div>
+  <div class="menu-section-label">Santé</div>
+  <div class="menu-item" onclick="naviguer('poids',this)"><span class="menu-item-icon">⚖️</span><span class="menu-item-text">Poids</span></div>
+</div>
+
+<div class="main">
+
+  <!-- PAGE GÉNÉRAL -->
+  <div class="page active" id="page-general">
+    <div class="page-header">
+      <div class="page-label">Vue d'ensemble</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="page-title">🏠 Général</div>
+      </div>
+      <div class="page-subtitle" id="general-update">Chargement...</div>
+    </div>
+
+    <!-- Sélecteur d'année -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="year-btn" onclick="setAnnee(2023)">2023</button>
+      <button class="year-btn" onclick="setAnnee(2024)">2024</button>
+      <button class="year-btn" onclick="setAnnee(2025)">2025</button>
+      <button class="year-btn" onclick="setAnnee(2026)">2026</button>
+    </div>
+
+    <!-- Filtre mois -->
+    <div style="margin-bottom:20px">
+      <select id="filtre-mois" onchange="setMois(this.value)" style="width:100%;background:#1a1a2a;border:1.5px solid #E0E0F0;border-radius:12px;padding:10px 14px;color:#F0F0F5;font-family:var(--font-mono);font-size:13px;outline:none;cursor:pointer">
+        <option value="all">📅 Tous les mois</option>
+        <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+        <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+        <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+        <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+      </select>
+    </div>
+
+    <!-- Stats annuelles style blanc -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div style="background:linear-gradient(135deg,#2a2a3a,#1a1a2a);border-radius:16px;border:1.5px solid #E0E0F0;padding:14px 12px;text-align:center">
+        <div style="font-size:9px;color:#E0E0F0;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Séances</div>
+        <div style="font-family:'Georgia',serif;font-size:26px;font-weight:700;color:#FFFFFF" id="g-sessions">—</div>
+        <div style="font-size:10px;color:#aaa;margin-top:2px">cette période</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#2a2a3a,#1a1a2a);border-radius:16px;border:1.5px solid #E0E0F0;padding:14px 12px;text-align:center">
+        <div style="font-size:9px;color:#E0E0F0;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Distance</div>
+        <div style="font-family:'Georgia',serif;font-size:26px;font-weight:700;color:#FFFFFF" id="g-km">—</div>
+        <div style="font-size:10px;color:#aaa;margin-top:2px">km total</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:linear-gradient(135deg,#2a2a3a,#1a1a2a);border-radius:16px;border:1.5px solid #E0E0F055;padding:14px 12px;text-align:center">
+        <div style="font-size:9px;color:#E0E0F0;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Temps total</div>
+        <div style="font-family:'Georgia',serif;font-size:26px;font-weight:700;color:#FFFFFF" id="g-temps">—</div>
+        <div style="font-size:10px;color:#aaa;margin-top:2px">heures</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#2a2a3a,#1a1a2a);border-radius:16px;border:1.5px solid #E0E0F055;padding:14px 12px;text-align:center">
+        <div style="font-size:9px;color:#E0E0F0;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Calories</div>
+        <div style="font-family:'Georgia',serif;font-size:26px;font-weight:700;color:#FFFFFF" id="g-cal">—</div>
+        <div style="font-size:10px;color:#aaa;margin-top:2px">kcal</div>
+      </div>
+    </div>
+
+    <!-- Activités par année -->
+    <div style="background:#15151F;border-radius:16px;border:1px solid #E0E0F033;padding:18px;margin-bottom:14px">
+      <div style="font-size:10px;color:#E0E0F0;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px" id="g-activites-titre">Activités · année</div>
+      <div class="activity-grid">
+        <div class="activity-card velo" onclick="naviguer('velo',null)">
+          <div class="activity-icon">🚴</div>
+          <div class="activity-name">Vélo</div>
+          <div class="activity-stat" id="g-velo-stat">—</div>
+        </div>
+        <div class="activity-card course" onclick="naviguer('course',null)">
+          <div class="activity-icon">🏃</div>
+          <div class="activity-name">Course</div>
+          <div class="activity-stat" id="g-course-stat">—</div>
+        </div>
+        <div class="activity-card autre" onclick="naviguer('autre',null)">
+          <div class="activity-icon">🏋️</div>
+          <div class="activity-name">Autre</div>
+          <div class="activity-stat" id="g-autre-stat">—</div>
+        </div>
+        <div class="activity-card poids" onclick="naviguer('poids',null)">
+          <div class="activity-icon">⚖️</div>
+          <div class="activity-name">Poids moyen</div>
+          <div class="activity-stat" id="g-poids-stat">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Graphiques -->
+    <div style="background:#15151F;border-radius:16px;border:1px solid #E0E0F022;padding:18px;margin-bottom:14px">
+      <div style="font-size:10px;color:#E0E0F0;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">Distance par mois (km)</div>
+      <canvas id="chartGeneralDist"></canvas>
+    </div>
+    <div style="background:#15151F;border-radius:16px;border:1px solid #E0E0F022;padding:18px;margin-bottom:14px">
+      <div style="font-size:10px;color:#E0E0F0;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">Séances par mois</div>
+      <canvas id="chartGeneralSeances"></canvas>
+    </div>
+
+    <div style="font-size:10px;color:#E0E0F0;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">Dernières sessions</div>
+    <div id="general-sessions"><div class="loading"><div class="spinner"></div><br>Chargement...</div></div>
+  </div>
+
+  <!-- PAGE VÉLO -->
+  <div class="page" id="page-velo">
+    <div class="page-header">
+      <div class="page-label">Sport</div>
+      <div class="page-title">🚴 Vélo</div>
+    </div>
+    <div class="sub-tabs">
+      <div class="sub-tab active" onclick="setSubTab(this,'velo','all')">Tout</div>
+      <div class="sub-tab" onclick="setSubTab(this,'velo','route')">Route</div>
+      <div class="sub-tab" onclick="setSubTab(this,'velo','hometrainer')">Home trainer</div>
+      <div class="sub-tab" onclick="setSubTab(this,'velo','salle')">Salle</div>
+    </div>
+    <!-- Stats style bleu -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:linear-gradient(135deg,#1a2a4a,#0d1a3a);border-radius:14px;border:1.5px solid #4EADFF;padding:12px 10px;text-align:center">
+        <div style="font-size:9px;color:#4EADFF;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Semaine</div>
+        <div style="font-family:'Georgia',serif;font-size:22px;font-weight:700;color:#87CEEB" id="v-km">—</div>
+        <div style="font-size:10px;color:#4EADFF88;margin-top:2px">km</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#1a2a4a,#0d1a3a);border-radius:14px;border:1.5px solid #4EADFF;padding:12px 10px;text-align:center">
+        <div style="font-size:9px;color:#4EADFF;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Vitesse moy.</div>
+        <div style="font-family:'Georgia',serif;font-size:22px;font-weight:700;color:#87CEEB" id="v-vit">—</div>
+        <div style="font-size:10px;color:#4EADFF88;margin-top:2px">km/h</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#1a2a4a,#0d1a3a);border-radius:14px;border:1.5px solid #4EADFF;padding:12px 10px;text-align:center">
+        <div style="font-size:9px;color:#4EADFF;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">FC moy.</div>
+        <div style="font-family:'Georgia',serif;font-size:22px;font-weight:700;color:#87CEEB" id="v-fc">—</div>
+        <div style="font-size:10px;color:#4EADFF88;margin-top:2px">bpm</div>
+      </div>
+    </div>
+    <div style="background:#15151F;border-radius:16px;border:1px solid #4EADFF33;padding:18px;margin-bottom:14px">
+      <div style="font-size:10px;color:#4EADFF;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">Distance · semaine</div>
+      <canvas id="chartVeloSemaine"></canvas>
+    </div>
+    <div style="background:#15151F;border-radius:16px;border:1px solid #4EADFF22;padding:18px;margin-bottom:14px">
+      <div style="font-size:10px;color:#4EADFF;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">Progression · 6 mois</div>
+      <canvas id="chartVeloMois"></canvas>
+    </div>
+    <div style="background:#15151F;border-radius:16px;border:1px solid #4EADFF22;padding:18px;margin-bottom:14px">
+      <div style="font-size:10px;color:#4EADFF;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px">Objectifs du mois</div>
+      <div id="velo-objectifs"></div>
+    </div>
+    <div style="font-size:10px;color:#4EADFF;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">Dernières sessions</div>
+    <div id="velo-sessions"><div class="loading"><div class="spinner"></div><br>Chargement...</div></div>
+  </div>
+
+  <!-- PAGE COURSE -->
+  <div class="page" id="page-course">
+    <div class="page-header">
+      <div class="page-label">Sport</div>
+      <div class="page-title">🏃 Course</div>
+    </div>
+    <div class="sub-tabs">
+      <div class="sub-tab active" onclick="setSubTab(this,'course','all')">Tout</div>
+      <div class="sub-tab" onclick="setSubTab(this,'course','classique')">Classique</div>
+      <div class="sub-tab" onclick="setSubTab(this,'course','fractionne')">Fractionné</div>
+      <div class="sub-tab" onclick="setSubTab(this,'course','tapis')">Tapis / Salle</div>
+    </div>
+    <!-- Stats style vert -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:linear-gradient(135deg,#0d3b2e,#071a14);border-radius:14px;border:1.5px solid #00E5A0;padding:12px 10px;text-align:center">
+        <div style="font-size:9px;color:#00E5A0;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Semaine</div>
+        <div style="font-family:'Georgia',serif;font-size:22px;font-weight:700;color:#00E5A0" id="c-km">—</div>
+        <div style="font-size:10px;color:#00E5A088;margin-top:2px">km</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#0d3b2e,#071a14);border-radius:14px;border:1.5px solid #00E5A0;padding:12px 10px;text-align:center">
+        <div style="font-size:9px;color:#00E5A0;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Pace moy.</div>
+        <div style="font-family:'Georgia',serif;font-size:22px;font-weight:700;color:#00E5A0" id="c-pace">—</div>
+        <div style="font-size:10px;color:#00E5A088;margin-top:2px">/km</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#0d3b2e,#071a14);border-radius:14px;border:1.5px solid #00E5A0;padding:12px 10px;text-align:center">
+        <div style="font-size:9px;color:#00E5A0;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">FC moy.</div>
+        <div style="font-family:'Georgia',serif;font-size:22px;font-weight:700;color:#00E5A0" id="c-fc">—</div>
+        <div style="font-size:10px;color:#00E5A088;margin-top:2px">bpm</div>
+      </div>
+    </div>
+    <div style="background:#15151F;border-radius:16px;border:1px solid #00E5A033;padding:18px;margin-bottom:14px">
+      <div style="font-size:10px;color:#00E5A0;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">Distance · semaine</div>
+      <canvas id="chartCourseSemaine"></canvas>
+    </div>
+    <div style="background:#15151F;border-radius:16px;border:1px solid #00E5A022;padding:18px;margin-bottom:14px">
+      <div style="font-size:10px;color:#00E5A0;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">Progression · 6 mois</div>
+      <canvas id="chartCourseMois"></canvas>
+    </div>
+    <div style="background:#15151F;border-radius:16px;border:1px solid #00E5A022;padding:18px;margin-bottom:14px">
+      <div style="font-size:10px;color:#00E5A0;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px">Objectifs du mois</div>
+      <div id="course-objectifs"></div>
+    </div>
+    <div style="font-size:10px;color:#00E5A0;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">Dernières sessions</div>
+    <div id="course-sessions"><div class="loading"><div class="spinner"></div><br>Chargement...</div></div>
+  </div>
+
+  <!-- PAGE AUTRE -->
+  <div class="page" id="page-autre">
+    <div class="page-header">
+      <div class="page-label">Sport</div>
+      <div class="page-title">🏋️ Autre</div>
+    </div>
+    <div class="sub-tabs">
+      <div class="sub-tab active" onclick="setSubTab(this,'autre','all')">Tout</div>
+      <div class="sub-tab" onclick="setSubTab(this,'autre','Elliptique')">Elliptique</div>
+      <div class="sub-tab" onclick="setSubTab(this,'autre','Rameur')">Rameur</div>
+      <div class="sub-tab" onclick="setSubTab(this,'autre','Stepper')">Stepper</div>
+    </div>
+    <!-- Stats style orange -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:linear-gradient(135deg,#3a1a0d,#1a0d07);border-radius:14px;border:1.5px solid #FF6B35;padding:12px 10px;text-align:center">
+        <div style="font-size:9px;color:#FF6B35;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Ce mois</div>
+        <div style="font-family:'Georgia',serif;font-size:22px;font-weight:700;color:#FF6B35" id="a-sessions">—</div>
+        <div style="font-size:10px;color:#FF6B3588;margin-top:2px">sessions</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#3a1a0d,#1a0d07);border-radius:14px;border:1.5px solid #FF6B35;padding:12px 10px;text-align:center">
+        <div style="font-size:9px;color:#FF6B35;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Durée tot.</div>
+        <div style="font-family:'Georgia',serif;font-size:22px;font-weight:700;color:#FF6B35" id="a-duree">—</div>
+        <div style="font-size:10px;color:#FF6B3588;margin-top:2px">ce mois</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#3a1a0d,#1a0d07);border-radius:14px;border:1.5px solid #FF6B35;padding:12px 10px;text-align:center">
+        <div style="font-size:9px;color:#FF6B35;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">FC moy.</div>
+        <div style="font-family:'Georgia',serif;font-size:22px;font-weight:700;color:#FF6B35" id="a-fc">—</div>
+        <div style="font-size:10px;color:#FF6B3588;margin-top:2px">bpm</div>
+      </div>
+    </div>
+    <div style="font-size:10px;color:#FF6B35;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">Dernières sessions</div>
+    <div id="autre-sessions"><div class="loading"><div class="spinner"></div><br>Chargement...</div></div>
+  </div>
+
+  <!-- PAGE MUSCULATION -->
+  <div class="page" id="page-musculation">
+    <div class="page-header">
+      <div class="page-label">Sport</div>
+      <div class="page-title">💪 Musculation</div>
+    </div>
+
+    <!-- Stats rapides -->
+    <div class="stats-grid" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
+      <div class="stat-card"><div class="stat-label">Ce mois</div><div class="stat-value" style="color:var(--purple)" id="m-sessions">—</div><div class="stat-unit">séances</div></div>
+      <div class="stat-card"><div class="stat-label">Cette semaine</div><div class="stat-value" style="color:var(--purple)" id="m-semaine">—</div><div class="stat-unit">exercices</div></div>
+    </div>
+
+    <!-- Graphique évolution -->
+    <div style="background:#15151F;border-radius:16px;border:1px solid #1E1E2E;padding:18px;margin-bottom:14px">
+      <div style="font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">Évolution · poids soulevé</div>
+
+      <!-- Sélecteurs en cascade -->
+      <div class="fields-row" style="margin-bottom:10px">
+        <div class="field" style="margin-bottom:0">
+          <select id="evo-zone" onchange="updateEvoExercice()" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:8px 12px;color:var(--text);font-family:var(--font-mono);font-size:13px;outline:none">
+            <option value="">-- Zone --</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <select id="evo-exercice" onchange="afficherEvolution()" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:8px 12px;color:var(--text);font-family:var(--font-mono);font-size:13px;outline:none">
+            <option value="">-- Exercice --</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Boutons période -->
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        <button class="sub-tab active" id="evo-btn-1" onclick="setEvoPeriode(1,this)">1M</button>
+        <button class="sub-tab" id="evo-btn-3" onclick="setEvoPeriode(3,this)">3M</button>
+        <button class="sub-tab" id="evo-btn-6" onclick="setEvoPeriode(6,this)">6M</button>
+      </div>
+
+      <canvas id="chartMuscu"></canvas>
+      <div id="evo-empty" style="text-align:center;padding:20px;color:var(--text3);font-size:13px">Sélectionne une zone et un exercice</div>
+    </div>
+
+    <!-- Sous-onglets zone -->
+    <div class="sub-tabs" id="muscu-tabs">
+      <div class="sub-tab active" onclick="setMuscuTab('all',this)">Tout</div>
+      <div class="sub-tab" onclick="setMuscuTab('Haut',this)">Haut</div>
+      <div class="sub-tab" onclick="setMuscuTab('Bas',this)">Bas</div>
+      <div class="sub-tab" onclick="setMuscuTab('Abdos',this)">Abdos</div>
+      <div class="sub-tab" onclick="setMuscuTab('bilan',this)">📋 Bilan</div>
+    </div>
+
+    <!-- Liste exercices ou bilan -->
+    <div id="muscu-bilan" style="display:none"></div>
+    <div style="font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px" id="muscu-liste-titre">Derniers exercices</div>
+    <div id="muscu-liste"><div class="loading"><div class="spinner"></div><br>Chargement...</div></div>
+  </div>
+
+  <!-- PAGE POIDS -->
+  <div class="page" id="page-poids">
+    <div class="page-header"><div class="page-label">Santé</div><div class="page-title">⚖️ Poids</div></div>
+
+    <!-- Carte principale poids actuel -->
+    <div style="background:linear-gradient(135deg,#1a3a5c,#0d6efd22);border-radius:20px;border:1.5px solid #4EADFF;padding:24px;margin-bottom:14px;text-align:center">
+      <div style="font-size:10px;color:#4EADFF;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px">Dernière mesure</div>
+      <div style="display:flex;align-items:baseline;justify-content:center;gap:6px">
+        <span style="font-family:'Georgia',serif;font-size:64px;font-weight:700;color:#87CEEB;line-height:1" id="poids-current">—</span>
+        <span style="font-size:22px;color:#4EADFF">kg</span>
+      </div>
+      <div style="font-size:12px;color:#4EADFF;opacity:0.7;margin-top:6px" id="poids-date">Aucune saisie</div>
+      <div style="margin-top:10px" id="poids-diff"></div>
+    </div>
+
+    <!-- IMC -->
+    <div style="background:linear-gradient(135deg,#1a2a3a,#0d4a6e22);border-radius:16px;border:1.5px solid #4EADFF55;padding:16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:10px;color:#4EADFF;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Indice de Masse Corporelle</div>
+        <div style="font-size:12px;color:#aaa" id="poids-imc-label">—</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Georgia',serif;font-size:36px;font-weight:700;line-height:1" id="poids-imc">—</div>
+        <div style="font-size:10px;color:#666;margin-top:2px">kg/m²</div>
+      </div>
+    </div>
+
+    <!-- Stats min/moy/max -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:#15151F;border-radius:14px;border:1.5px solid #4EADFF33;padding:14px 10px;text-align:center">
+        <div style="font-size:9px;color:#4EADFF;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Mini</div>
+        <div style="font-family:'Georgia',serif;font-size:20px;font-weight:700;color:#00E5A0" id="poids-min">—</div>
+        <div style="font-size:10px;color:#444;margin-top:2px">kg</div>
+      </div>
+      <div style="background:#15151F;border-radius:14px;border:1.5px solid #4EADFF55;padding:14px 10px;text-align:center">
+        <div style="font-size:9px;color:#4EADFF;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Moyenne</div>
+        <div style="font-family:'Georgia',serif;font-size:20px;font-weight:700;color:#87CEEB" id="poids-moy">—</div>
+        <div style="font-size:10px;color:#444;margin-top:2px">kg</div>
+      </div>
+      <div style="background:#15151F;border-radius:14px;border:1.5px solid #4EADFF33;padding:14px 10px;text-align:center">
+        <div style="font-size:9px;color:#4EADFF;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Maxi</div>
+        <div style="font-family:'Georgia',serif;font-size:20px;font-weight:700;color:#FF4757" id="poids-max">—</div>
+        <div style="font-size:10px;color:#444;margin-top:2px">kg</div>
+      </div>
+    </div>
+
+    <!-- Graphique avec boutons période -->
+    <div style="background:#15151F;border-radius:16px;border:1px solid #1E1E2E;padding:18px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:10px;color:#4EADFF;letter-spacing:2px;text-transform:uppercase">Évolution</div>
+        <div style="display:flex;gap:6px">
+          <button class="poids-period-btn active" onclick="setPoidsPeriode(0.25,this)">1S</button>
+          <button class="poids-period-btn" onclick="setPoidsPeriode(0.5,this)">2S</button>
+          <button class="poids-period-btn" onclick="setPoidsPeriode(1,this)">1M</button>
+          <button class="poids-period-btn" onclick="setPoidsPeriode(3,this)">3M</button>
+          <button class="poids-period-btn" onclick="setPoidsPeriode(6,this)">6M</button>
+          <button class="poids-period-btn" onclick="setPoidsPeriode(12,this)">1A</button>
+        </div>
+      </div>
+      <div id="poids-legende" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+      <canvas id="chartPoids"></canvas>
+    </div>
+
+    <!-- Historique -->
+    <div style="font-size:10px;color:#4EADFF;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">Historique</div>
+    <div id="poids-historique"></div>
+  </div>
+
+  <!-- PAGE BILAN MUSCULATION -->
+  <div class="page" id="page-bilan">
+    <div class="page-header">
+      <div class="page-label">Sport</div>
+      <div class="page-title">📋 Bilan Musculation</div>
+      <div class="page-subtitle">Dernières performances par exercice</div>
+    </div>
+    <div id="bilan-contenu"><div class="loading"><div class="spinner"></div><br>Chargement...</div></div>
+  </div>
+
+  <!-- FIN PAGES -->
+
+</div>
+
+<!-- BOUTON FLOTTANT -->
+<button class="btn-add-float" id="btnAdd" onclick="ouvrirModal()">
+  <span>+</span> Ajouter
+</button>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)fermerModal()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">➕ Nouvelle session</div>
+    <div id="form-sport-content">
+      <div class="fields-row">
+        <div class="field"><label class="field-label">Activité</label>
+          <select id="form-activite" onchange="updateFormType()">
+            <option value="Vélo">🚴 Vélo</option>
+            <option value="Course à pied">🏃 Course</option>
+            <option value="Elliptique">🏋️ Elliptique</option>
+            <option value="Rameur">🚣 Rameur</option>
+            <option value="Stepper">🦵 Stepper</option>
+          </select>
+        </div>
+        <div class="field"><label class="field-label">Type</label><select id="form-type"></select></div>
+      </div>
+      <div class="fields-row">
+        <div class="field"><label class="field-label">Date</label><input type="date" id="form-date"></div>
+        <div class="field"><label class="field-label">Durée</label><input type="text" id="form-duree" placeholder="1h30"></div>
+      </div>
+      <div class="fields-row">
+        <div class="field"><label class="field-label">Distance (km)</label><input type="number" id="form-km" placeholder="0.0" step="0.1"></div>
+        <div class="field"><label class="field-label">FC moyen (bpm)</label><input type="number" id="form-bpm" placeholder="145"></div>
+      </div>
+      <div class="fields-row">
+        <div class="field"><label class="field-label" id="form-metric-label">Pace (/km)</label><input type="text" id="form-metric" placeholder="5'30&quot;"></div>
+        <div class="field"><label class="field-label">Ressenti (1-5)</label>
+          <select id="form-ressenti">
+            <option value="">—</option>
+            <option value="5">5 — Très bien</option>
+            <option value="4">4 — Bien</option>
+            <option value="3">3 — Moyen</option>
+            <option value="2">2 — Difficile</option>
+            <option value="1">1 — Très difficile</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label class="field-label">Notes</label><input type="text" id="form-notes" placeholder="Sortie tranquille..."></div>
+    </div>
+    <div id="form-poids-content" style="display:none">
+      <div class="fields-row">
+        <div class="field"><label class="field-label">Date</label><input type="date" id="form-poids-date"></div>
+        <div class="field"><label class="field-label">Poids (kg)</label><input type="number" id="form-poids-val" placeholder="70.5" step="0.1"></div>
+      </div>
+      <div class="field"><label class="field-label">Notes</label><input type="text" id="form-poids-notes" placeholder="Le matin à jeun..."></div>
+    </div>
+    <!-- Formulaire musculation -->
+    <div id="form-muscu-content" style="display:none">
+      <div class="fields-row">
+        <div class="field">
+          <label class="field-label">Date</label>
+          <input type="date" id="form-muscu-date">
+        </div>
+        <div class="field">
+          <label class="field-label">Zone</label>
+          <select id="form-muscu-zone" onchange="updateExercices()">
+            <option value="">-- Choisir --</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Exercice</label>
+        <select id="form-muscu-exercice">
+          <option value="">-- Choisir une zone d'abord --</option>
+        </select>
+      </div>
+      <div class="fields-row">
+        <div class="field">
+          <label class="field-label">Séries</label>
+          <input type="number" id="form-muscu-series" placeholder="3" min="1">
+        </div>
+        <div class="field">
+          <label class="field-label">Répétitions</label>
+          <input type="number" id="form-muscu-reps" placeholder="12" min="1">
+        </div>
+      </div>
+      <div class="fields-row">
+        <div class="field">
+          <label class="field-label">Poids (kg)</label>
+          <input type="number" id="form-muscu-poids" placeholder="20" step="0.5">
+        </div>
+        <div class="field">
+          <label class="field-label">Notes</label>
+          <input type="text" id="form-muscu-notes" placeholder="Optionnel...">
+        </div>
+      </div>
+      <!-- Note smileys -->
+      <div class="field">
+        <label class="field-label">Ressenti</label>
+        <div style="display:flex;gap:12px;margin-top:6px;justify-content:center" id="smiley-container">
+          <span class="smiley" data-val="1" onclick="setEtoile(1)" title="Très difficile" style="font-size:30px;cursor:pointer;opacity:0.3;transition:all .2s">😫</span>
+          <span class="smiley" data-val="2" onclick="setEtoile(2)" title="Difficile"       style="font-size:30px;cursor:pointer;opacity:0.3;transition:all .2s">😕</span>
+          <span class="smiley" data-val="3" onclick="setEtoile(3)" title="Moyen"           style="font-size:30px;cursor:pointer;opacity:0.3;transition:all .2s">😐</span>
+          <span class="smiley" data-val="4" onclick="setEtoile(4)" title="Bien"            style="font-size:30px;cursor:pointer;opacity:0.3;transition:all .2s">😊</span>
+          <span class="smiley" data-val="5" onclick="setEtoile(5)" title="Excellent"       style="font-size:30px;cursor:pointer;opacity:0.3;transition:all .2s">😄</span>
+        </div>
+        <input type="hidden" id="form-muscu-note" value="0">
+      </div>
+    </div>
+    <button class="btn-primary" id="btn-save" onclick="sauvegarder()">Enregistrer</button>
+    <button class="btn-secondary" onclick="fermerModal()">Annuler</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG API ────────────────────────────────────────────
+const API_URL = "https://script.google.com/macros/s/AKfycbxLF-KKeKfnNyqdjX55RohU7kUpTC3dv6RYdrL0yKLXC-iuN38P7Iq2WFiQ4Mur_OFbLw/exec";
+
+// ── STATE ─────────────────────────────────────────────────
+let allData       = [];
+let allPoids      = [];
+let allExercices  = {};
+let allMusculation = [];
+let pageActive    = "general";
+let subActif      = { velo:"all", course:"all", autre:"all" };
+let muscuTabActif = "all";
+let chartsInit    = {};
+let menuOuvert    = false;
+let modePoids     = false;
+let modeMuscu     = false;
+let anneeActive   = new Date().getFullYear();
+let moisActif     = "all";
+
+// ── CHARTS ────────────────────────────────────────────────
+function creerChart(id, type, labels, data, color) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return null;
+  if (chartsInit[id]) { chartsInit[id].destroy(); }
+  chartsInit[id] = new Chart(ctx, {
+    type,
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: type==='bar' ? color : 'transparent',
+        borderColor: color,
+        borderWidth: type==='line' ? 2.5 : 0,
+        borderRadius: type==='bar' ? 6 : 0,
+        pointBackgroundColor: color,
+        pointRadius: type==='line' ? 4 : 0,
+        tension: 0.3,
+        fill: false,
+      }]
+    },
+    options: {
+      plugins: { legend: { display:false } },
+      scales: {
+        x: { ticks:{ color:'#AAAACC', font:{size:11} }, grid:{ display:false }, border:{ display:false } },
+        y: { display:false }
+      },
+      animation: { duration:600 }
+    }
+  });
+  return chartsInit[id];
+}
+
+// ── CHARGEMENT DONNÉES ────────────────────────────────────
+async function chargerDonnees() {
+  try {
+    const resp = await fetch(API_URL + "?action=getData");
+    const json = await resp.json();
+    if (json.error) throw new Error(json.error);
+    allData        = json.activites    || [];
+    allPoids       = json.poids        || [];
+    allExercices   = json.exercices    || {};
+    allMusculation = json.musculation  || [];
+    afficherGeneral();
+    afficherPage(pageActive);
+    const d = new Date();
+    document.getElementById('general-update').textContent =
+      `Mis à jour le ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} à ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  } catch(e) {
+    console.error("Erreur API:", e);
+    document.getElementById('general-update').textContent = "Erreur de connexion — vérifie l'API";
+  }
+}
+
+// ── HELPERS DATA ──────────────────────────────────────────
+function getMoisActuel() {
+  const d = new Date();
+  return String(d.getMonth()+1);
+}
+function getAnneeActuelle() {
+  return String(new Date().getFullYear());
+}
+
+function filtrerParActivite(activite) {
+  return allData.filter(r => r["Activité"] === activite);
+}
+
+function filtrerParMois(list) {
+  return list.filter(r => r["Mois N°"] === getMoisActuel() && r["Année"] === getAnneeActuelle());
+}
+
+function getThisWeek(list) {
+  const today  = new Date();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((today.getDay()+6)%7));
+  monday.setHours(0,0,0,0);
+  return list.filter(r => {
+    if (!r["Date"]) return false;
+    const parts = r["Date"].split("/");
+    if (parts.length < 3) return false;
+    const d = new Date(parts[2], parts[1]-1, parts[0]);
+    return d >= monday;
+  });
+}
+
+function getSemaineDonnees(list) {
+  const data = [0,0,0,0,0,0,0];
+  const today  = new Date();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((today.getDay()+6)%7));
+  monday.setHours(0,0,0,0);
+  getThisWeek(list).forEach(r => {
+    const parts = r["Date"].split("/");
+    const d = new Date(parts[2], parts[1]-1, parts[0]);
+    const idx = Math.floor((d - monday) / 86400000);
+    if (idx >= 0 && idx < 7) data[idx] += parseFloat(r["Distance"]) || 0;
+  });
+  return data;
+}
+
+function getMoisDonnees(activite) {
+  const moisKeys = [];
+  const moisLabels = [];
+  const moisNoms = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+  const today = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    moisKeys.push({ m: String(d.getMonth()+1), y: String(d.getFullYear()) });
+    moisLabels.push(moisNoms[d.getMonth()]);
+  }
+  const filtered = activite ? filtrerParActivite(activite) : allData;
+  const data = moisKeys.map(k =>
+    filtered.filter(r => r["Mois N°"] === k.m && r["Année"] === k.y)
+             .reduce((sum, r) => sum + (parseFloat(r["Distance"]) || 0), 0)
+  );
+  return { labels: moisLabels, data };
+}
+
+function calcFC(list) {
+  const valid = list.filter(r => parseInt(r["FC moyenne"]) > 0);
+  if (!valid.length) return "—";
+  return Math.round(valid.reduce((s,r) => s + parseInt(r["FC moyenne"]), 0) / valid.length);
+}
+
+function renderSessions(list, containerId, accentColor, icon) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const sorted = [...list].sort((a,b) => {
+    const pa = a["Date"].split("/"), pb = b["Date"].split("/");
+    return new Date(pb[2],pb[1]-1,pb[0]) - new Date(pa[2],pa[1]-1,pa[0]);
+  }).slice(0, 6);
+
+  if (!sorted.length) {
+    container.innerHTML = '<div class="loading">Aucune session trouvée</div>';
+    return;
+  }
+
+  const ICONS = { "Vélo":"🚴", "Course à pied":"🏃", "Elliptique":"🏋️", "Rameur":"🚣", "Stepper":"🦵", "Natation":"🏊", "Cardio":"❤️" };
+  const BADGES = { "Vélo":"badge-velo", "Course à pied":"badge-course" };
+
+  container.innerHTML = sorted.map(s => {
+    const ico   = ICONS[s["Activité"]] || icon || "🏃";
+    const badge = BADGES[s["Activité"]] || "badge-autre";
+    const km    = parseFloat(s["Distance"]) > 0 ? `<span class="session-km">${parseFloat(s["Distance"]).toFixed(1)} km</span>` : "";
+    const fc    = parseInt(s["FC moyenne"]) > 0  ? `<span class="session-meta">♥ ${s["FC moyenne"]}</span>` : "";
+    const duree = s["Durée"] ? `<span class="session-meta">⏱ ${s["Durée"]}</span>` : "";
+    const vit   = s["Vitesse moyenne"] && s["Vitesse moyenne"] !== "--" ? `<span class="session-meta">⚡ ${s["Vitesse moyenne"]}</span>` : "";
+    const type  = s["Type"] ? `<span class="session-badge ${badge}">${s["Type"]}</span>` : "";
+    const notes = s["Notes"] ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;font-style:italic">${s["Notes"]}</div>` : "";
+    return `
+    <div class="session-item">
+      <div class="session-emoji">${ico}</div>
+      <div class="session-info">
+        <div class="session-top">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="session-name">${s["Activité"]}</span>${type}
+          </div>
+          <span class="session-date">${s["Date"]}</span>
+        </div>
+        <div class="session-stats">${km}${vit}${fc}${duree}</div>
+        ${notes}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderObjectifs(containerId, items) {
+  document.getElementById(containerId).innerHTML = items.map(o => `
+    <div class="obj-row">
+      <div class="obj-header">
+        <span class="obj-name">${o.label}</span>
+        <span class="obj-val" style="color:${o.color}">${o.current} / ${o.target} ${o.unit}</span>
+      </div>
+      <div class="progress-bg"><div class="progress-bar" style="width:${Math.min(100,(o.current/o.target)*100).toFixed(1)}%;background:${o.color}"></div></div>
+    </div>`).join("");
+}
+
+// ── PAGES ─────────────────────────────────────────────────
+// ── SÉLECTEUR ANNÉE & MOIS ────────────────────────────────
+function setAnnee(annee) {
+  anneeActive = annee;
+  moisActif   = "all";
+  document.getElementById('filtre-mois').value = "all";
+  document.querySelectorAll('.year-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.textContent) === annee);
+  });
+  afficherGeneral();
+}
+
+function setMois(mois) {
+  moisActif = mois;
+  afficherGeneral();
+}
+
+function filtrerParPeriode(list) {
+  let result = list.filter(r => r["Année"] === String(anneeActive));
+  if (moisActif !== "all") {
+    result = result.filter(r => r["Mois N°"] === String(moisActif));
+  }
+  return result;
+}
+
+function calcTempsTotal(list) {
+  let totalMin = 0;
+  list.forEach(r => {
+    const d = r["Durée"] || "";
+    const parts = d.split(":");
+    if (parts.length === 3) {
+      totalMin += parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    } else if (parts.length === 2) {
+      totalMin += parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    }
+  });
+  if (totalMin === 0) return "—";
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return h > 0 ? `${h}h${String(m).padStart(2,'0')}` : `${m}min`;
+}
+
+function afficherGeneral() {
+  const periode = filtrerParPeriode(allData);
+  const km      = periode.reduce((s,r) => s + (parseFloat(r["Distance"]) || 0), 0);
+  const cal     = periode.reduce((s,r) => s + (parseFloat(r["Calories"]) || 0), 0);
+
+  document.getElementById('g-sessions').textContent = periode.length;
+  document.getElementById('g-km').textContent       = km.toFixed(0);
+  document.getElementById('g-temps').textContent    = calcTempsTotal(periode);
+  document.getElementById('g-cal').textContent      = cal > 0 ? Math.round(cal).toLocaleString() : "—";
+
+  // Titre dynamique
+  const MOIS_NOMS = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const titrePeriode = moisActif === "all" ? String(anneeActive) : `${MOIS_NOMS[parseInt(moisActif)]} ${anneeActive}`;
+  document.getElementById('g-activites-titre').textContent = `Activités · ${titrePeriode}`;
+
+  // Par activité sur la période
+  const veloPer   = filtrerParPeriode(filtrerParActivite("Vélo"));
+  const coursePer = filtrerParPeriode(filtrerParActivite("Course à pied"));
+  const autrePer  = filtrerParPeriode(allData.filter(r => !["Vélo","Course à pied"].includes(r["Activité"])));
+
+  const kmVelo   = veloPer.reduce((s,r) => s + (parseFloat(r["Distance"]) || 0), 0);
+  const kmCourse = coursePer.reduce((s,r) => s + (parseFloat(r["Distance"]) || 0), 0);
+
+  document.getElementById('g-velo-stat').textContent   = `${veloPer.length} séances · ${kmVelo.toFixed(0)} km`;
+  document.getElementById('g-course-stat').textContent = `${coursePer.length} séances · ${kmCourse.toFixed(0)} km`;
+  document.getElementById('g-autre-stat').textContent  = `${autrePer.length} séances`;
+
+  // Poids moyen sur la période
+  let poidsFiltre = allPoids.filter(p => p.date && p.date.includes(String(anneeActive)));
+  if (moisActif !== "all") {
+    const moisStr = String(moisActif).padStart(2,'0');
+    poidsFiltre = poidsFiltre.filter(p => {
+      const parts = p.date.split("/");
+      return parts.length >= 2 && parts[1] === moisStr;
+    });
+  }
+  if (poidsFiltre.length) {
+    const moy = (poidsFiltre.reduce((s,p) => s + parseFloat(p.valeur), 0) / poidsFiltre.length).toFixed(1);
+    document.getElementById('g-poids-stat').textContent = `Moy. ${moy} kg`;
+  } else {
+    document.getElementById('g-poids-stat').textContent = "Aucune donnée";
+  }
+
+  // Graphiques — si mois sélectionné on montre les jours, sinon les 12 mois
+  const MOIS_LABELS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const anneeData   = allData.filter(r => r["Année"] === String(anneeActive));
+
+  const distMois    = Array(12).fill(0);
+  const seancesMois = Array(12).fill(0);
+  anneeData.forEach(r => {
+    const m = parseInt(r["Mois N°"]) - 1;
+    if (m >= 0 && m < 12) {
+      distMois[m]    += parseFloat(r["Distance"]) || 0;
+      seancesMois[m] += 1;
+    }
+  });
+  creerChart('chartGeneralDist',    'bar', MOIS_LABELS, distMois.map(v => parseFloat(v.toFixed(1))), '#6EE7C7');
+  creerChart('chartGeneralSeances', 'bar', MOIS_LABELS, seancesMois, '#93C5FD');
+
+  // Sessions récentes filtrées sur la période
+  renderSessions(periode, 'general-sessions', 'var(--green)', '🏃');
+}
+
+function afficherVelo(sub) {
+  let list = filtrerParActivite("Vélo");
+  if (sub && sub !== "all") {
+    const ENV_MAP = { route:"Extérieur", hometrainer:"Home trainer", salle:"Salle" };
+    list = list.filter(r => r["Environnement"] === ENV_MAP[sub]);
+  }
+  const semaine = getThisWeek(list);
+  const kmSem   = semaine.reduce((s,r) => s + (parseFloat(r["Distance"]) || 0), 0);
+  const vitValid = semaine.filter(r => parseFloat(r["Vitesse moyenne"]) > 0);
+  const vitMoy  = vitValid.length ? (vitValid.reduce((s,r) => s + parseFloat(r["Vitesse moyenne"]), 0) / vitValid.length).toFixed(1) : "—";
+
+  document.getElementById('v-km').textContent  = kmSem.toFixed(1);
+  document.getElementById('v-vit').textContent = vitMoy;
+  document.getElementById('v-fc').textContent  = calcFC(semaine);
+
+  creerChart('chartVeloSemaine', 'bar', ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'], getSemaineDonnees(list), '#93C5FD');
+  const { labels, data } = getMoisDonnees("Vélo");
+  creerChart('chartVeloMois', 'line', labels, data, '#93C5FD');
+
+  const mois = filtrerParMois(list);
+  renderObjectifs('velo-objectifs', [
+    { label:"Distance ce mois", current:mois.reduce((s,r)=>s+(parseFloat(r["Distance"])||0),0).toFixed(0), target:400, unit:"km", color:"var(--orange)" },
+    { label:"Sessions ce mois", current:mois.length, target:8, unit:"séances", color:"var(--blue)" },
+  ]);
+  renderSessions(list, 'velo-sessions', 'var(--orange)', '🚴');
+}
+
+function afficherCourse(sub) {
+  let list = filtrerParActivite("Course à pied");
+  if (sub && sub !== "all") {
+    const TYPE_MAP = { classique:"Entrainement", fractionne:"Fractionné", tapis:"Entrainement" };
+    const ENV_MAP  = { classique:"Extérieur", fractionne:"Extérieur", tapis:"Salle" };
+    if (sub === "tapis") list = list.filter(r => r["Environnement"] === "Salle");
+    else if (sub === "fractionne") list = list.filter(r => r["Type"] === "Fractionné");
+    else list = list.filter(r => r["Environnement"] === "Extérieur" && r["Type"] === "Entrainement");
+  }
+  const semaine = getThisWeek(list);
+  const kmSem   = semaine.reduce((s,r) => s + (parseFloat(r["Distance"]) || 0), 0);
+
+  document.getElementById('c-km').textContent   = kmSem.toFixed(1);
+  document.getElementById('c-pace').textContent = "—";
+  document.getElementById('c-fc').textContent   = calcFC(semaine);
+
+  creerChart('chartCourseSemaine', 'bar', ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'], getSemaineDonnees(list), '#6EE7C7');
+  const { labels, data } = getMoisDonnees("Course à pied");
+  creerChart('chartCourseMois', 'line', labels, data, '#6EE7C7');
+
+  const mois = filtrerParMois(list);
+  renderObjectifs('course-objectifs', [
+    { label:"Distance ce mois", current:mois.reduce((s,r)=>s+(parseFloat(r["Distance"])||0),0).toFixed(0), target:200, unit:"km", color:"var(--green)" },
+    { label:"Sessions ce mois", current:mois.length, target:12, unit:"séances", color:"var(--blue)" },
+  ]);
+  renderSessions(list, 'course-sessions', 'var(--green)', '🏃');
+}
+
+function afficherAutre(sub) {
+  const AUTRES = ["Elliptique","Rameur","Stepper","Cardio","Natation"];
+  let list = allData.filter(r => AUTRES.includes(r["Activité"]));
+  if (sub && sub !== "all") list = list.filter(r => r["Activité"] === sub);
+
+  const mois = filtrerParMois(list);
+  document.getElementById('a-sessions').textContent = mois.length;
+  document.getElementById('a-duree').textContent    = mois.length > 0 ? mois.length + "x" : "—";
+  document.getElementById('a-fc').textContent       = calcFC(mois);
+
+  renderSessions(list, 'autre-sessions', 'var(--blue)', '🏋️');
+}
+
+// ── MUSCULATION ───────────────────────────────────────────
+let evoPeriode = 1;
+
+function setEtoile(val) {
+  document.getElementById('form-muscu-note').value = val;
+  document.querySelectorAll('.smiley').forEach(s => {
+    s.style.opacity   = parseInt(s.dataset.val) === val ? "1" : "0.3";
+    s.style.transform = parseInt(s.dataset.val) === val ? "scale(1.3)" : "scale(1)";
+  });
+}
+
+function resetEtoiles() {
+  document.getElementById('form-muscu-note').value = 0;
+  document.querySelectorAll('.smiley').forEach(s => {
+    s.style.opacity   = "0.3";
+    s.style.transform = "scale(1)";
+  });
+}
+
+function setEvoPeriode(mois, el) {
+  evoPeriode = mois;
+  document.querySelectorAll('#evo-btn-1, #evo-btn-3, #evo-btn-6').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  afficherEvolution();
+}
+
+function updateEvoExercice() {
+  const zone = document.getElementById('evo-zone').value;
+  const sel  = document.getElementById('evo-exercice');
+  const exos = allExercices[zone] || [];
+  sel.innerHTML = '<option value="">-- Exercice --</option>' +
+    exos.map(e => `<option value="${e}">${e}</option>`).join("");
+  afficherEvolution();
+}
+
+function remplirEvoZones() {
+  const sel   = document.getElementById('evo-zone');
+  const zones = Object.keys(allExercices);
+  sel.innerHTML = '<option value="">-- Zone --</option>' +
+    zones.map(z => `<option value="${z}">${z}</option>`).join("");
+  document.getElementById('evo-exercice').innerHTML = '<option value="">-- Exercice --</option>';
+}
+
+function afficherEvolution() {
+  const zone     = document.getElementById('evo-zone').value;
+  const exercice = document.getElementById('evo-exercice').value;
+  const empty    = document.getElementById('evo-empty');
+  const canvas   = document.getElementById('chartMuscu');
+
+  if (!zone || !exercice) {
+    empty.style.display  = 'block';
+    canvas.style.display = 'none';
+    return;
+  }
+
+  // Filtrer les données
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - evoPeriode);
+  cutoff.setHours(0,0,0,0);
+
+  const filtered = allMusculation.filter(m => {
+    if (m.zone !== zone || m.exercice !== exercice) return false;
+    const parts = m.date.split("/");
+    if (parts.length < 3) return false;
+    return new Date(parts[2], parts[1]-1, parts[0]) >= cutoff;
+  }).sort((a,b) => {
+    const da = a.date.split("/").reverse().join("-");
+    const db = b.date.split("/").reverse().join("-");
+    return new Date(da) - new Date(db);
+  });
+
+  if (!filtered.length) {
+    empty.textContent    = `Aucune donnée pour ${exercice} sur cette période`;
+    empty.style.display  = 'block';
+    canvas.style.display = 'none';
+    return;
+  }
+
+  empty.style.display  = 'none';
+  canvas.style.display = 'block';
+
+  const labels    = filtered.map(m => m.date.slice(0,5));
+  const dataPoints = filtered.map(m => parseFloat(m.poids) || 0);
+
+  if (chartsInit['chartMuscu']) chartsInit['chartMuscu'].destroy();
+  chartsInit['chartMuscu'] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: `${exercice} (kg)`,
+        data: dataPoints,
+        borderColor: '#C084FC',
+        backgroundColor: 'rgba(168,85,247,0.2)',
+        borderWidth: 2.5,
+        pointBackgroundColor: '#A855F7',
+        pointRadius: filtered.length < 20 ? 5 : 3,
+        pointHoverRadius: 7,
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} kg` } }
+      },
+      scales: {
+        x: { ticks:{ color:'#AAAACC', font:{size:10}, maxTicksLimit:8, maxRotation:0 }, grid:{ display:false }, border:{ display:false } },
+        y: {
+          ticks:{ color:'#AAAACC', font:{size:10} },
+          grid:{ color:'#2E2E3E55' },
+          border:{ display:false },
+          min: Math.floor(Math.min(...dataPoints) - 2),
+          max: Math.ceil(Math.max(...dataPoints) + 2),
+        }
+      },
+      animation: { duration:600 }
+    }
+  });
+}
+function setMuscuTab(zone, el) {
+  muscuTabActif = zone;
+  document.querySelectorAll('#muscu-tabs .sub-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+
+  if (zone === 'bilan') {
+    document.getElementById('muscu-liste').style.display      = 'none';
+    document.getElementById('muscu-liste-titre').style.display = 'none';
+    document.getElementById('muscu-bilan').style.display      = 'block';
+    afficherBilan();
+  } else {
+    document.getElementById('muscu-liste').style.display      = 'block';
+    document.getElementById('muscu-liste-titre').style.display = 'block';
+    document.getElementById('muscu-bilan').style.display      = 'none';
+    afficherMusculation();
+  }
+}
+
+function afficherBilanPage() {
+  const ZONE_CONFIG = [
+    { zone:"Haut",  icon:"🏋️", color:"#A855F7" },
+    { zone:"Bas",   icon:"🦵", color:"#FF6B35" },
+    { zone:"Abdos", icon:"💪", color:"#00E5A0" },
+  ];
+
+  const derniereParExo = {};
+  allMusculation.forEach(m => {
+    const cle = m.zone + "_" + m.exercice;
+    if (!derniereParExo[cle]) {
+      derniereParExo[cle] = m;
+    } else {
+      const da = m.date.split("/").reverse().join("-");
+      const db = derniereParExo[cle].date.split("/").reverse().join("-");
+      if (new Date(da) > new Date(db)) derniereParExo[cle] = m;
+    }
+  });
+
+  const smileys = ["","😫","😕","😐","😊","😄"];
+  let html = "";
+
+  ZONE_CONFIG.forEach(({ zone, icon, color }) => {
+    const exercicesZone = allExercices[zone] || [];
+    if (!exercicesZone.length) return;
+
+    html += `
+    <div style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:10px 14px;background:#15151F;border-radius:12px;border-left:4px solid ${color}">
+        <span style="font-size:22px">${icon}</span>
+        <span style="font-family:'Georgia',serif;font-size:17px;font-weight:700;color:${color}">${zone}</span>
+        <span style="font-size:11px;color:#666;margin-left:auto">${exercicesZone.length} exercice${exercicesZone.length>1?'s':''}</span>
+      </div>`;
+
+    exercicesZone.forEach(exo => {
+      const cle      = zone + "_" + exo;
+      const derniere = derniereParExo[cle];
+
+      if (derniere) {
+        const note   = parseInt(derniere.note) || 0;
+        const smiley = note > 0 ? smileys[note] : "";
+        html += `
+        <div style="background:#15151F;border-radius:14px;border:1px solid #1E1E2E;border-left:3px solid ${color};padding:14px 16px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span style="font-weight:700;font-size:14px;color:${color}">${exo}</span>
+            <span style="font-size:11px;color:var(--text3)">${derniere.date}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+            <div style="background:#0A0A0F;border-radius:10px;padding:10px;text-align:center">
+              <div style="font-size:9px;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Séries</div>
+              <div style="font-family:'Georgia',serif;font-size:22px;font-weight:700;color:#F0F0F5">${derniere.series || "—"}</div>
+            </div>
+            <div style="background:#0A0A0F;border-radius:10px;padding:10px;text-align:center">
+              <div style="font-size:9px;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Reps</div>
+              <div style="font-family:'Georgia',serif;font-size:22px;font-weight:700;color:#F0F0F5">${derniere.repetitions || "—"}</div>
+            </div>
+            <div style="background:#0A0A0F;border-radius:10px;padding:10px;text-align:center">
+              <div style="font-size:9px;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Poids kg</div>
+              <div style="font-family:'Georgia',serif;font-size:22px;font-weight:700;color:${color}">${derniere.poids || "—"}</div>
+            </div>
+          </div>
+          ${smiley ? `<div style="margin-top:8px;font-size:14px">${smiley} <span style="font-size:11px;color:#666">Dernier ressenti</span></div>` : ""}
+          ${derniere.notes ? `<div style="font-size:11px;color:#555;margin-top:6px;font-style:italic">${derniere.notes}</div>` : ""}
+        </div>`;
+      } else {
+        html += `
+        <div style="background:#15151F;border-radius:14px;border:1px solid #1E1E2E;border-left:3px solid ${color}33;padding:12px 16px;margin-bottom:8px;opacity:0.5">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-weight:700;font-size:14px;color:#666">${exo}</span>
+            <span style="font-size:11px;color:#444">Pas encore fait</span>
+          </div>
+        </div>`;
+      }
+    });
+    html += `</div>`;
+  });
+
+  document.getElementById('bilan-contenu').innerHTML = html || '<div class="loading">Aucune donnée disponible</div>';
+}
+
+function afficherMusculation() {
+  // Remplir les zones du graphique évolution
+  remplirEvoZones();
+
+  let list = [...allMusculation].sort((a,b) => {
+    const da = a.date.split("/").reverse().join("-");
+    const db = b.date.split("/").reverse().join("-");
+    return new Date(db) - new Date(da);
+  });
+
+  if (muscuTabActif !== "all") list = list.filter(m => m.zone === muscuTabActif);
+
+  // Stats
+  const today  = new Date();
+  const monday = new Date(today); monday.setDate(today.getDate()-((today.getDay()+6)%7)); monday.setHours(0,0,0,0);
+  const semaine = list.filter(m => {
+    const parts = m.date.split("/");
+    if (parts.length < 3) return false;
+    return new Date(parts[2], parts[1]-1, parts[0]) >= monday;
+  });
+
+  const moisActuelNum = String(today.getMonth()+1).padStart(2,'0');
+  const anneeActuelle = String(today.getFullYear());
+  const datesMois = new Set(list.filter(m => {
+    const parts = m.date.split("/");
+    return parts.length === 3 && parts[1] === moisActuelNum && parts[2] === anneeActuelle;
+  }).map(m => m.date));
+
+  document.getElementById('m-sessions').textContent = datesMois.size || "—";
+  document.getElementById('m-semaine').textContent  = semaine.length || "—";
+
+  if (!list.length) {
+    document.getElementById('muscu-liste').innerHTML = '<div class="loading">Aucun exercice — ajoute ta première séance !</div>';
+    return;
+  }
+
+  const ZONE_COLORS = { Haut:"#A855F7", Bas:"#FF6B35", Abdos:"#00E5A0" };
+
+  const SMILEYS = { 1:"😫", 2:"😕", 3:"😐", 4:"😊", 5:"😄" };
+  document.getElementById('muscu-liste').innerHTML = list.slice(0,20).map(m => {
+    const color   = ZONE_COLORS[m.zone] || "#888";
+    const note    = parseInt(m.note) || 0;
+    const smiley  = note > 0 ? SMILEYS[note] : "";
+    return `
+    <div style="background:#15151F;border-radius:14px;border:1px solid #1E1E2E;border-left:3px solid ${color};padding:14px 16px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:'Georgia',serif;font-size:15px;font-weight:700;color:${color}">${m.exercice}</span>
+          <span style="font-size:9px;padding:3px 8px;border-radius:10px;background:${color}22;color:${color};font-weight:600">${m.zone}</span>
+        </div>
+        <span style="font-size:11px;color:var(--text3)">${m.date}</span>
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+        ${m.series      ? `<span style="font-size:12px;color:#aaa">🔢 ${m.series} séries</span>` : ""}
+        ${m.repetitions ? `<span style="font-size:12px;color:#aaa">🔁 ${m.repetitions} reps</span>` : ""}
+        ${m.poids       ? `<span style="font-size:12px;color:#aaa">⚖️ ${m.poids} kg</span>` : ""}
+        ${smiley        ? `<span style="font-size:18px">${smiley}</span>` : ""}
+      </div>
+      ${m.notes ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;font-style:italic">${m.notes}</div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+function updateExercices() {
+  const zone = document.getElementById('form-muscu-zone').value;
+  const sel  = document.getElementById('form-muscu-exercice');
+  const exos = allExercices[zone] || [];
+  sel.innerHTML = exos.length
+    ? exos.map(e => `<option value="${e}">${e}</option>`).join("")
+    : '<option value="">Aucun exercice pour cette zone</option>';
+}
+
+function remplirZones() {
+  const sel   = document.getElementById('form-muscu-zone');
+  const zones = Object.keys(allExercices);
+  sel.innerHTML = '<option value="">-- Choisir --</option>' +
+    zones.map(z => `<option value="${z}">${z}</option>`).join("");
+  document.getElementById('form-muscu-exercice').innerHTML = '<option value="">-- Choisir une zone d\'abord --</option>';
+  resetEtoiles();
+}
+const TAILLE_M    = 1.73;
+let poidsPeriode  = 0.25;
+
+function setPoidsPeriode(mois, el) {
+  poidsPeriode = mois;
+  document.querySelectorAll('.poids-period-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  afficherPoids();
+}
+
+function labelIMC(imc) {
+  const v = parseFloat(imc);
+  if (v < 18.5) return { label:"Insuffisance pondérale", color:"#4EADFF" };
+  if (v < 25)   return { label:"Poids normal ✓",          color:"#00E5A0" };
+  if (v < 30)   return { label:"Surpoids",                color:"#FF6B35" };
+  return               { label:"Obésité",                 color:"#FF4757" };
+}
+
+function afficherPoids() {
+  if (!allPoids.length) {
+    document.getElementById('poids-historique').innerHTML = '<div class="loading">Aucune donnée — ajoute ton premier poids !</div>';
+    return;
+  }
+
+  // Trier du plus récent au plus ancien
+  const sorted = [...allPoids].sort((a,b) => {
+    const da = a.date.split("/").reverse().join("-");
+    const db = b.date.split("/").reverse().join("-");
+    return new Date(db) - new Date(da);
+  });
+
+  const dernier      = sorted[0];
+  const poidsDernier = parseFloat(dernier.valeur);
+
+  // Poids actuel
+  document.getElementById('poids-current').textContent = poidsDernier.toFixed(1);
+  document.getElementById('poids-date').textContent    = `Mesuré le ${dernier.date}`;
+
+  // IMC
+  let imcVal = dernier.imc && dernier.imc !== "" && dernier.imc !== "—"
+    ? parseFloat(dernier.imc)
+    : poidsDernier / (TAILLE_M * TAILLE_M);
+  const imc     = imcVal.toFixed(1);
+  const imcInfo = labelIMC(imc);
+  document.getElementById('poids-imc').textContent       = imc;
+  document.getElementById('poids-imc').style.color       = imcInfo.color;
+  document.getElementById('poids-imc-label').textContent = imcInfo.label;
+  document.getElementById('poids-imc-label').style.color = imcInfo.color;
+
+  // ── Calcul du cutoff selon période ────────────────────
+  const cutoff = new Date();
+  if      (poidsPeriode === 0.25) cutoff.setTime(new Date().getTime() - 7*24*60*60*1000);
+  else if (poidsPeriode === 0.5)  cutoff.setTime(new Date().getTime() - 14*24*60*60*1000);
+  else                            cutoff.setMonth(cutoff.getMonth() - poidsPeriode);
+  cutoff.setHours(0,0,0,0);
+
+  // Mesures de la période sélectionnée
+  const mesuresPeriode = sorted.filter(p => {
+    const parts = p.date.split("/");
+    if (parts.length < 3) return false;
+    return new Date(parts[2], parts[1]-1, parts[0]) >= cutoff;
+  });
+
+  // ── Stats Min/Moy/Max selon la période ────────────────
+  const valsRef = mesuresPeriode.length > 0
+    ? mesuresPeriode.map(p => parseFloat(p.valeur))
+    : sorted.map(p => parseFloat(p.valeur));
+
+  document.getElementById('poids-moy').textContent = (valsRef.reduce((s,v)=>s+v,0)/valsRef.length).toFixed(1);
+  document.getElementById('poids-min').textContent = Math.min(...valsRef).toFixed(1);
+  document.getElementById('poids-max').textContent = Math.max(...valsRef).toFixed(1);
+
+  // ── Évolution depuis début régime (03/05/2026) ────────
+  const dateRef = new Date(2026, 4, 3);
+  const mesuresDepuisRef = sorted.filter(p => {
+    const parts = p.date.split("/");
+    if (parts.length < 3) return false;
+    return new Date(parts[2], parts[1]-1, parts[0]) >= dateRef;
+  });
+
+  const diffEl = document.getElementById('poids-diff');
+  let htmlDiff = "";
+
+  if (mesuresDepuisRef.length >= 1) {
+    const premierRegime = mesuresDepuisRef[mesuresDepuisRef.length - 1];
+    const diffRegime    = (poidsDernier - parseFloat(premierRegime.valeur)).toFixed(1);
+    const couleur       = diffRegime > 0 ? '#FF4757' : '#00E5A0';
+    const fleche        = diffRegime > 0 ? '▲ +' : '▼ ';
+    htmlDiff += `<div style="font-size:13px;font-weight:700;color:${couleur};margin-bottom:4px">${fleche}${diffRegime} kg depuis le début du régime</div>`;
+  }
+
+  // Évolution sur la période affichée
+  if (mesuresPeriode.length >= 2) {
+    const premierPeriode = mesuresPeriode[mesuresPeriode.length - 1];
+    const diffPeriode    = (poidsDernier - parseFloat(premierPeriode.valeur)).toFixed(1);
+    const couleur2       = diffPeriode > 0 ? '#FF4757' : '#00E5A0';
+    const fleche2        = diffPeriode > 0 ? '▲ +' : '▼ ';
+    const labelPeriode   = poidsPeriode === 0.25 ? "cette semaine" : poidsPeriode === 0.5 ? "ces 2 semaines" : poidsPeriode === 1 ? "ce mois" : poidsPeriode === 3 ? "ces 3 mois" : poidsPeriode === 6 ? "ces 6 mois" : "cette année";
+    htmlDiff += `<div style="font-size:12px;font-weight:600;color:${couleur2};opacity:0.85">${fleche2}${diffPeriode} kg ${labelPeriode}</div>`;
+  }
+  diffEl.innerHTML = htmlDiff;
+
+  // Graphique — mesures de la période du plus ancien au plus récent
+  const mesuresPeriodeGraph = [...mesuresPeriode].reverse();
+
+  // ── Downsampling : max 40 points affichés ─────────────
+  const MAX_POINTS = 40;
+  let graphData = mesuresPeriodeGraph;
+  if (mesuresPeriodeGraph.length > MAX_POINTS) {
+    const step = Math.ceil(mesuresPeriodeGraph.length / MAX_POINTS);
+    graphData = mesuresPeriodeGraph.filter((_, i) =>
+      i === 0 || i === mesuresPeriodeGraph.length - 1 || i % step === 0
+    );
+  }
+
+  // Labels et données
+  const labels = graphData.map(p => {
+    const parts = p.date.split("/");
+    return `${parts[0]}/${parts[1]}`;
+  });
+  const dataPoints = graphData.map(p => parseFloat(p.valeur));
+
+  // ── Légende HTML au-dessus du graphique ───────────────
+  const legendeItems = [
+    { label: 'Poids',                          color: '#ADD8E6', dash: false },
+    { label: 'Surpoids > 74.8 kg',             color: '#FF6B35', dash: true  },
+    { label: 'Obésité > 89.8 kg',              color: '#FF4757', dash: true  },
+    { label: 'Normal 55.3–74.8 kg',            color: '#00E5A0', dash: true  },
+  ];
+  const legendeEl = document.getElementById('poids-legende');
+  if (legendeEl) {
+    legendeEl.innerHTML = legendeItems.map(it => `
+      <div style="display:flex;align-items:center;gap:5px">
+        <svg width="22" height="10" viewBox="0 0 22 10">
+          ${it.dash
+            ? `<line x1="0" y1="5" x2="22" y2="5" stroke="${it.color}" stroke-width="2" stroke-dasharray="5,3"/>`
+            : `<line x1="0" y1="5" x2="22" y2="5" stroke="${it.color}" stroke-width="2.5"/>
+               <circle cx="11" cy="5" r="3" fill="${it.color}"/>`
+          }
+        </svg>
+        <span style="font-size:10px;color:#AAAACC">${it.label}</span>
+      </div>`).join("");
+  }
+
+  // ── Taille des points adaptative ──────────────────────
+  const nbPoints = graphData.length;
+  const ptRadius = nbPoints > 20 ? 2 : nbPoints > 10 ? 3 : 4;
+
+  // ── Recréer le graphique ───────────────────────────────
+  if (chartsInit['chartPoids']) { chartsInit['chartPoids'].destroy(); }
+  const ctx = document.getElementById('chartPoids');
+  if (ctx && graphData.length > 0) {
+    chartsInit['chartPoids'] = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          // Courbe poids
+          {
+            label: 'Poids',
+            data: dataPoints,
+            borderColor: '#ADD8E6',
+            backgroundColor: 'rgba(135,206,235,0.15)',
+            borderWidth: 2.5,
+            pointBackgroundColor: '#ADD8E6',
+            pointBorderColor: '#ADD8E6',
+            pointRadius: ptRadius,
+            pointHoverRadius: ptRadius + 3,
+            tension: 0.3,
+            fill: true,
+            order: 1,
+          },
+          // Ligne obésité (89.8 kg)
+          {
+            label: 'Obésité IMC 30 (> 89.8 kg)',
+            data: labels.map(() => 89.8),
+            borderColor: '#FF4757',
+            borderWidth: 1.5,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            fill: false,
+            order: 2,
+          },
+          // Ligne surpoids (74.8 kg)
+          {
+            label: 'Surpoids IMC 25 (74.8 → 89.8 kg)',
+            data: labels.map(() => 74.8),
+            borderColor: '#FF6B35',
+            borderWidth: 1.5,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            fill: false,
+            order: 3,
+          },
+          // Ligne normal (55.3 kg)
+          {
+            label: 'Normal IMC 18.5 (55.3 → 74.8 kg)',
+            data: labels.map(() => 55.3),
+            borderColor: '#00E5A0',
+            borderWidth: 1.5,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            fill: false,
+            order: 4,
+          },
+        ]
+      },
+      options: {
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ctx.datasetIndex === 0 ? `${ctx.parsed.y.toFixed(1)} kg` : ctx.dataset.label
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: '#AAAACC',
+              font: { size: 10 },
+              maxTicksLimit: window.innerWidth < 420 ? 5 : 8,
+              maxRotation: 0,
+            },
+            grid: { color: '#2E2E3E', display: true },
+            border: { display: false }
+          },
+          y: {
+            ticks: { color: '#AAAACC', font: { size: 10 } },
+            grid: { color: '#2E2E3E55' },
+            border: { display: false },
+            min: Math.floor(Math.min(...dataPoints) - 2),
+            max: Math.ceil(Math.max(...dataPoints) + 2),
+          }
+        },
+        animation: { duration: 600 }
+      }
+    });
+  }
+
+  // ── HISTORIQUE du plus récent au plus ancien ───────────
+  document.getElementById('poids-historique').innerHTML = sorted.map(p => {
+    const imcP    = p.imc && p.imc !== "" ? parseFloat(p.imc) : parseFloat(p.valeur) / (TAILLE_M * TAILLE_M);
+    const imcInfo = labelIMC(imcP.toFixed(1));
+    return `
+    <div style="background:#15151F;border-radius:14px;border:1px solid #1E1E2E;border-left:3px solid #4EADFF;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
+      <div style="font-size:20px;background:#0A0A0F;border-radius:10px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0">⚖️</div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <span style="font-family:'Georgia',serif;font-size:18px;font-weight:700;color:#87CEEB">${parseFloat(p.valeur).toFixed(1)} kg</span>
+          <span style="font-size:11px;color:#555">${p.date}</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span style="font-size:12px;color:#666">IMC</span>
+          <span style="font-size:12px;font-weight:700;color:${imcInfo.color}">${imcP.toFixed(1)}</span>
+          <span style="font-size:11px;color:${imcInfo.color}">${imcInfo.label}</span>
+        </div>
+        ${p.notes ? `<div style="font-size:11px;color:#555;margin-top:4px;font-style:italic">${p.notes}</div>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── NAVIGATION ────────────────────────────────────────────
+function naviguer(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  if (el) el.classList.add('active');
+  pageActive = page;
+  closeMenu();
+  document.getElementById('btnAdd').style.display = page === 'pompier' ? 'none' : 'flex';
+  afficherPage(page);
+}
+
+function afficherPage(page) {
+  const sub = subActif[page] || "all";
+  if (page === "velo")        afficherVelo(sub);
+  if (page === "course")      afficherCourse(sub);
+  if (page === "autre")       afficherAutre(sub);
+  if (page === "poids")       afficherPoids();
+  if (page === "general")     afficherGeneral();
+  if (page === "musculation") afficherMusculation();
+  if (page === "bilan")       afficherBilanPage();
+}
+
+function setSubTab(el, page, sub) {
+  el.closest('.sub-tabs').querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  subActif[page] = sub;
+  afficherPage(page);
+}
+
+// ── MENU ──────────────────────────────────────────────────
+function toggleMenu() {
+  menuOuvert = !menuOuvert;
+  document.getElementById('hamburger').classList.toggle('open', menuOuvert);
+  document.getElementById('menuDrawer').classList.toggle('open', menuOuvert);
+  document.getElementById('menuOverlay').classList.toggle('open', menuOuvert);
+}
+function closeMenu() {
+  menuOuvert = false;
+  document.getElementById('hamburger').classList.remove('open');
+  document.getElementById('menuDrawer').classList.remove('open');
+  document.getElementById('menuOverlay').classList.remove('open');
+}
+
+// ── MODAL ─────────────────────────────────────────────────
+function ouvrirModal() {
+  modePoids = (pageActive === 'poids');
+  modeMuscu = (pageActive === 'musculation');
+
+  document.getElementById('form-sport-content').style.display  = (!modePoids && !modeMuscu) ? 'block' : 'none';
+  document.getElementById('form-poids-content').style.display  = modePoids  ? 'block' : 'none';
+  document.getElementById('form-muscu-content').style.display  = modeMuscu  ? 'block' : 'none';
+
+  if (modeMuscu) {
+    document.getElementById('modal-title').textContent = '💪 Nouvel exercice';
+    document.getElementById('form-muscu-date').value = new Date().toISOString().split('T')[0];
+    remplirZones();
+  } else if (modePoids) {
+    document.getElementById('modal-title').textContent = '⚖️ Ajouter un poids';
+    document.getElementById('form-poids-date').value = new Date().toISOString().split('T')[0];
+  } else {
+    document.getElementById('modal-title').textContent = '➕ Nouvelle session';
+    document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
+    updateFormType();
+  }
+  document.getElementById('modal').classList.add('open');
+}
+function fermerModal() { document.getElementById('modal').classList.remove('open'); }
+
+function updateFormType() {
+  const activite = document.getElementById('form-activite').value;
+  const types = {
+    "Vélo":          [{v:"Entrainement",l:"Entrainement"},{v:"Fractionné",l:"Fractionné"}],
+    "Course à pied": [{v:"Entrainement",l:"Classique"},{v:"Fractionné",l:"Fractionné"},{v:"Entrainement",l:"Tapis / Salle"}],
+    "Elliptique":    [{v:"Entrainement",l:"Entrainement"}],
+    "Rameur":        [{v:"Entrainement",l:"Entrainement"},{v:"Fractionné",l:"Fractionné"}],
+    "Stepper":       [{v:"Entrainement",l:"Entrainement"}],
+  };
+  document.getElementById('form-type').innerHTML = (types[activite]||[]).map(t=>`<option value="${t.v}">${t.l}</option>`).join('');
+  document.getElementById('form-metric-label').textContent = activite === "Course à pied" ? "Pace (/km)" : "Vitesse (km/h)";
+  document.getElementById('form-metric').placeholder = activite === "Course à pied" ? "5'30\"" : "28.5";
+}
+
+async function sauvegarder() {
+  const btn = document.getElementById('btn-save');
+  btn.textContent = "Enregistrement...";
+  btn.disabled = true;
+
+  try {
+    if (modeMuscu) {
+      const date     = document.getElementById('form-muscu-date').value;
+      const zone     = document.getElementById('form-muscu-zone').value;
+      const exercice = document.getElementById('form-muscu-exercice').value;
+      const series   = document.getElementById('form-muscu-series').value;
+      const reps     = document.getElementById('form-muscu-reps').value;
+      const poids    = document.getElementById('form-muscu-poids').value;
+      const notes    = document.getElementById('form-muscu-notes').value;
+
+      const note     = document.getElementById('form-muscu-note').value;
+
+      if (!date || !zone || !exercice) { alert("Remplis la date, la zone et l'exercice !"); return; }
+
+      const params = new URLSearchParams({ action:"addMusculation", date, zone, exercice, series, repetitions:reps, poids, notes, note });
+      const resp   = await fetch(`${API_URL}?${params}`);
+      const json   = await resp.json();
+      if (json.error) throw new Error(json.error);
+
+      fermerModal();
+      await chargerDonnees();
+
+    } else if (modePoids) {
+      const val   = document.getElementById('form-poids-val').value;
+      const date  = document.getElementById('form-poids-date').value;
+      const notes = document.getElementById('form-poids-notes').value;
+      if (!val || !date) { alert("Remplis la date et le poids !"); return; }
+      const url  = `${API_URL}?action=addPoids&date=${encodeURIComponent(date)}&valeur=${val}&notes=${encodeURIComponent(notes)}`;
+      const resp = await fetch(url);
+      const json = await resp.json();
+      if (json.error) throw new Error(json.error);
+      fermerModal();
+      await chargerDonnees();
+
+    } else {
+      const km   = document.getElementById('form-km').value;
+      const date = document.getElementById('form-date').value;
+      if (!date || !km) { alert("Remplis au moins la date et la distance !"); return; }
+      const params = new URLSearchParams({
+        action       : "addEntry",
+        activite     : document.getElementById('form-activite').value,
+        type         : document.getElementById('form-type').value,
+        date,
+        duree        : document.getElementById('form-duree').value,
+        km,
+        bpm          : document.getElementById('form-bpm').value,
+        metric       : document.getElementById('form-metric').value,
+        ressenti     : document.getElementById('form-ressenti').value,
+        notes        : document.getElementById('form-notes').value,
+      });
+      const resp = await fetch(`${API_URL}?${params}`);
+      const json = await resp.json();
+      if (json.error) throw new Error(json.error);
+      fermerModal();
+      await chargerDonnees();
+    }
+  } catch(e) {
+    alert("Erreur : " + e.message);
+  } finally {
+    btn.textContent = "Enregistrer";
+    btn.disabled = false;
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  updateFormType();
+  // Activer le bon bouton année
+  document.querySelectorAll('.year-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.textContent) === anneeActive);
+  });
+  chargerDonnees();
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+});
+</script>
+</body>
+</html>

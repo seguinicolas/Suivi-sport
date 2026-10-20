@@ -638,10 +638,14 @@
       </div>
       <div class="field">
         <label class="field-label">Exercice</label>
-        <select id="form-muscu-exercice">
+        <select id="form-muscu-exercice" onchange="afficherDerniereSaisie()">
           <option value="">-- Choisir une zone d'abord --</option>
         </select>
       </div>
+
+      <!-- Dernière saisie de l'exercice -->
+      <div id="muscu-last" style="display:none;background:var(--bg);border:1px solid var(--border2);border-left:3px solid var(--purple);border-radius:10px;padding:10px 14px;margin-bottom:14px"></div>
+
       <div class="fields-row">
         <div class="field">
           <label class="field-label">Séries</label>
@@ -1331,6 +1335,40 @@ function afficherMusculation() {
   }).join("");
 }
 
+// Affiche, dans le formulaire d'ajout, la dernière saisie de l'exercice choisi
+function afficherDerniereSaisie() {
+  const zone = document.getElementById('form-muscu-zone').value;
+  const exo  = document.getElementById('form-muscu-exercice').value;
+  const box  = document.getElementById('muscu-last');
+  if (!zone || !exo) { box.style.display = 'none'; return; }
+
+  const toDate = m => { const p = m.date.split("/"); return new Date(p[2], p[1]-1, p[0]); };
+  const hist = allMusculation.filter(m => m.zone === zone && m.exercice === exo);
+
+  box.style.display = 'block';
+  if (!hist.length) {
+    box.innerHTML = '<div style="font-size:12px;color:var(--text3);font-style:italic">Aucune saisie précédente</div>';
+    return;
+  }
+
+  const last    = hist.reduce((a, b) => toDate(b) > toDate(a) ? b : a);
+  const SMILEYS = { 1:"😫", 2:"😕", 3:"😐", 4:"😊", 5:"😄" };
+  const note    = parseInt(last.note) || 0;
+
+  box.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase">Dernière saisie</span>
+      <span style="font-size:11px;color:var(--text3)">${last.date}</span>
+    </div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--text2)">
+      ${last.series      ? `<span>🔢 ${last.series} séries</span>` : ""}
+      ${last.repetitions ? `<span>🔁 ${last.repetitions} reps</span>` : ""}
+      ${last.poids       ? `<span>⚖️ ${last.poids} kg</span>` : ""}
+      ${note > 0         ? `<span style="font-size:20px">${SMILEYS[note]}</span>` : ""}
+    </div>
+    ${last.notes ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;font-style:italic">${last.notes}</div>` : ""}`;
+}
+
 function updateExercices() {
   const zone = document.getElementById('form-muscu-zone').value;
   const sel  = document.getElementById('form-muscu-exercice');
@@ -1338,6 +1376,7 @@ function updateExercices() {
   sel.innerHTML = exos.length
     ? exos.map(e => `<option value="${e}">${e}</option>`).join("")
     : '<option value="">Aucun exercice pour cette zone</option>';
+  afficherDerniereSaisie();
 }
 
 function remplirZones() {
@@ -1346,6 +1385,7 @@ function remplirZones() {
   sel.innerHTML = '<option value="">-- Choisir --</option>' +
     zones.map(z => `<option value="${z}">${z}</option>`).join("");
   document.getElementById('form-muscu-exercice').innerHTML = '<option value="">-- Choisir une zone d\'abord --</option>';
+  document.getElementById('muscu-last').style.display = 'none';
   resetEtoiles();
 }
 const TAILLE_M    = 1.73;
@@ -1619,7 +1659,8 @@ function naviguer(page, el) {
   if (el) el.classList.add('active');
   pageActive = page;
   closeMenu();
-  document.getElementById('btnAdd').style.display = page === 'pompier' ? 'none' : 'flex';
+  // Pas de bouton « Ajouter » sur la page Bilan Musculation
+  document.getElementById('btnAdd').style.display = page === 'bilan' ? 'none' : 'flex';
   afficherPage(page);
 }
 

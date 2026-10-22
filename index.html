@@ -166,6 +166,10 @@
   .btn-primary { width:100%; padding:15px; background:var(--green); color:var(--bg); border:none; border-radius:var(--radius); font-family:var(--font-title); font-size:15px; font-weight:700; cursor:pointer; margin-top:8px; }
   .btn-secondary { width:100%; padding:13px; background:transparent; color:var(--text3); border:1px solid var(--border2); border-radius:var(--radius); font-family:var(--font-mono); font-size:14px; cursor:pointer; margin-top:8px; }
 
+  /* Ressenti obligatoire : clignotement si oublié */
+  @keyframes shakeRed { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)} }
+  .smiley-erreur { animation:shakeRed .4s ease; outline:1.5px solid var(--red); outline-offset:6px; border-radius:12px; }
+
   canvas { max-height:130px !important; }
   #chartPoids { max-height:280px !important; min-height:240px; }
   #chartMuscu { max-height:220px !important; min-height:180px; }
@@ -668,7 +672,7 @@
       </div>
       <!-- Note smileys -->
       <div class="field">
-        <label class="field-label">Ressenti</label>
+        <label class="field-label">Ressenti <span style="color:var(--red)">*</span></label>
         <div style="display:flex;gap:12px;margin-top:6px;justify-content:center" id="smiley-container">
           <span class="smiley" data-val="1" onclick="setEtoile(1)" title="Très difficile" style="font-size:30px;cursor:pointer;opacity:0.3;transition:all .2s">😫</span>
           <span class="smiley" data-val="2" onclick="setEtoile(2)" title="Difficile"       style="font-size:30px;cursor:pointer;opacity:0.3;transition:all .2s">😕</span>
@@ -1058,6 +1062,7 @@ let evoPeriode = 1;
 
 function setEtoile(val) {
   document.getElementById('form-muscu-note').value = val;
+  document.getElementById('smiley-container').classList.remove('smiley-erreur');
   document.querySelectorAll('.smiley').forEach(s => {
     s.style.opacity   = parseInt(s.dataset.val) === val ? "1" : "0.3";
     s.style.transform = parseInt(s.dataset.val) === val ? "scale(1.3)" : "scale(1)";
@@ -1066,10 +1071,19 @@ function setEtoile(val) {
 
 function resetEtoiles() {
   document.getElementById('form-muscu-note').value = 0;
+  document.getElementById('smiley-container').classList.remove('smiley-erreur');
   document.querySelectorAll('.smiley').forEach(s => {
     s.style.opacity   = "0.3";
     s.style.transform = "scale(1)";
   });
+}
+
+// Signale visuellement que le ressenti est obligatoire
+function signalerRessentiManquant() {
+  const c = document.getElementById('smiley-container');
+  c.classList.remove('smiley-erreur');
+  void c.offsetWidth; // relance l'animation
+  c.classList.add('smiley-erreur');
 }
 
 function setEvoPeriode(mois, el) {
@@ -1336,10 +1350,21 @@ function afficherMusculation() {
 }
 
 // Affiche, dans le formulaire d'ajout, la dernière saisie de l'exercice choisi
+// ET pré-remplit séries / répétitions / poids avec cette dernière saisie (modifiables)
 function afficherDerniereSaisie() {
   const zone = document.getElementById('form-muscu-zone').value;
   const exo  = document.getElementById('form-muscu-exercice').value;
   const box  = document.getElementById('muscu-last');
+
+  const inpSeries = document.getElementById('form-muscu-series');
+  const inpReps   = document.getElementById('form-muscu-reps');
+  const inpPoids  = document.getElementById('form-muscu-poids');
+
+  // Réinitialiser les champs à chaque changement d'exercice
+  inpSeries.value = "";
+  inpReps.value   = "";
+  inpPoids.value  = "";
+
   if (!zone || !exo) { box.style.display = 'none'; return; }
 
   const toDate = m => { const p = m.date.split("/"); return new Date(p[2], p[1]-1, p[0]); };
@@ -1354,6 +1379,11 @@ function afficherDerniereSaisie() {
   const last    = hist.reduce((a, b) => toDate(b) > toDate(a) ? b : a);
   const SMILEYS = { 1:"😫", 2:"😕", 3:"😐", 4:"😊", 5:"😄" };
   const note    = parseInt(last.note) || 0;
+
+  // ✅ Pré-remplissage avec la dernière saisie (modifiable)
+  inpSeries.value = last.series      || "";
+  inpReps.value   = last.repetitions || "";
+  inpPoids.value  = last.poids       || "";
 
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -1386,6 +1416,12 @@ function remplirZones() {
     zones.map(z => `<option value="${z}">${z}</option>`).join("");
   document.getElementById('form-muscu-exercice').innerHTML = '<option value="">-- Choisir une zone d\'abord --</option>';
   document.getElementById('muscu-last').style.display = 'none';
+
+  // Repartir proprement à chaque ouverture de la modal
+  document.getElementById('form-muscu-series').value = "";
+  document.getElementById('form-muscu-reps').value   = "";
+  document.getElementById('form-muscu-poids').value  = "";
+  document.getElementById('form-muscu-notes').value  = "";
   resetEtoiles();
 }
 const TAILLE_M    = 1.73;
@@ -1753,6 +1789,8 @@ async function sauvegarder() {
       const note     = document.getElementById('form-muscu-note').value;
 
       if (!date || !zone || !exercice) { alert("Remplis la date, la zone et l'exercice !"); return; }
+      if (!series || !reps || !poids)  { alert("Remplis les séries, les répétitions et le poids !"); return; }
+      if (!note || note === "0")       { signalerRessentiManquant(); alert("Choisis ton ressenti (smiley) !"); return; }
 
       const params = new URLSearchParams({ action:"addMusculation", date, zone, exercice, series, repetitions:reps, poids, notes, note });
       const resp   = await fetch(`${API_URL}?${params}`);

@@ -173,6 +173,7 @@
   canvas { max-height:130px !important; }
   #chartPoids { max-height:280px !important; min-height:240px; }
   #chartMuscu { max-height:220px !important; min-height:180px; }
+  #chartMuscuForm { max-height:170px !important; min-height:140px; }
   .year-btn { padding:8px 18px; border:1.5px solid var(--border); border-radius:20px; font-size:13px; font-weight:700; color:var(--text3); cursor:pointer; background:transparent; font-family:var(--font-title); transition:all .2s; }
   .year-btn:hover { border-color:var(--green); color:var(--text); }
   .year-btn.active { border-color:var(--green); color:var(--green); background:rgba(0,229,160,0.1); }
@@ -649,6 +650,13 @@
 
       <!-- Dernière saisie de l'exercice -->
       <div id="muscu-last" style="display:none;background:var(--bg);border:1px solid var(--border2);border-left:3px solid var(--purple);border-radius:10px;padding:10px 14px;margin-bottom:14px"></div>
+
+      <!-- Graphique évolution (6 mois) de l'exercice choisi -->
+      <div id="muscu-evo-form" style="display:none;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">Évolution · poids soulevé (6 mois)</div>
+        <canvas id="chartMuscuForm"></canvas>
+        <div id="evo-form-empty" style="display:none;text-align:center;padding:14px;color:var(--text3);font-size:12px;font-style:italic">Aucune donnée sur les 6 derniers mois</div>
+      </div>
 
       <div class="fields-row">
         <div class="field">
@@ -1349,12 +1357,93 @@ function afficherMusculation() {
   }).join("");
 }
 
+// Graphique d'évolution (fixé sur 6 mois) de l'exercice choisi, dans le formulaire d'ajout
+function afficherEvolutionForm(zone, exo) {
+  const wrap   = document.getElementById('muscu-evo-form');
+  const canvas = document.getElementById('chartMuscuForm');
+  const empty  = document.getElementById('evo-form-empty');
+
+  if (chartsInit['chartMuscuForm']) {
+    chartsInit['chartMuscuForm'].destroy();
+    delete chartsInit['chartMuscuForm'];
+  }
+
+  if (!zone || !exo) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - 6);
+  cutoff.setHours(0,0,0,0);
+
+  const filtered = allMusculation.filter(m => {
+    if (m.zone !== zone || m.exercice !== exo) return false;
+    const parts = m.date.split("/");
+    if (parts.length < 3) return false;
+    return new Date(parts[2], parts[1]-1, parts[0]) >= cutoff;
+  }).sort((a,b) => {
+    const da = a.date.split("/").reverse().join("-");
+    const db = b.date.split("/").reverse().join("-");
+    return new Date(da) - new Date(db);
+  });
+
+  if (!filtered.length) {
+    canvas.style.display = 'none';
+    empty.style.display  = 'block';
+    return;
+  }
+
+  canvas.style.display = 'block';
+  empty.style.display  = 'none';
+
+  const labels     = filtered.map(m => m.date.slice(0,5));
+  const dataPoints = filtered.map(m => parseFloat(m.poids) || 0);
+
+  chartsInit['chartMuscuForm'] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: `${exo} (kg)`,
+        data: dataPoints,
+        borderColor: '#C084FC',
+        backgroundColor: 'rgba(168,85,247,0.2)',
+        borderWidth: 2.5,
+        pointBackgroundColor: '#A855F7',
+        pointRadius: filtered.length < 20 ? 4 : 2,
+        pointHoverRadius: 6,
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} kg` } }
+      },
+      scales: {
+        x: { ticks:{ color:'#AAAACC', font:{size:10}, maxTicksLimit:6, maxRotation:0 }, grid:{ display:false }, border:{ display:false } },
+        y: {
+          ticks:{ color:'#AAAACC', font:{size:10} },
+          grid:{ color:'#2E2E3E55' },
+          border:{ display:false },
+          min: Math.floor(Math.min(...dataPoints) - 2),
+          max: Math.ceil(Math.max(...dataPoints) + 2),
+        }
+      },
+      animation: { duration:600 }
+    }
+  });
+}
+
 // Affiche, dans le formulaire d'ajout, la dernière saisie de l'exercice choisi
 // ET pré-remplit séries / répétitions / poids avec cette dernière saisie (modifiables)
 function afficherDerniereSaisie() {
   const zone = document.getElementById('form-muscu-zone').value;
   const exo  = document.getElementById('form-muscu-exercice').value;
   const box  = document.getElementById('muscu-last');
+
+  // Graphique d'évolution 6 mois
+  afficherEvolutionForm(zone, exo);
 
   const inpSeries = document.getElementById('form-muscu-series');
   const inpReps   = document.getElementById('form-muscu-reps');
@@ -1416,6 +1505,7 @@ function remplirZones() {
     zones.map(z => `<option value="${z}">${z}</option>`).join("");
   document.getElementById('form-muscu-exercice').innerHTML = '<option value="">-- Choisir une zone d\'abord --</option>';
   document.getElementById('muscu-last').style.display = 'none';
+  afficherEvolutionForm("", "");
 
   // Repartir proprement à chaque ouverture de la modal
   document.getElementById('form-muscu-series').value = "";

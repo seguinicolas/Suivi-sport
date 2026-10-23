@@ -448,6 +448,19 @@
       <div class="stat-card"><div class="stat-label">Cette semaine</div><div class="stat-value" style="color:var(--purple)" id="m-semaine">—</div><div class="stat-unit">exercices</div></div>
     </div>
 
+    <!-- Bouton suggestion de séance (zone Haut) -->
+    <button id="btn-suggest" onclick="toggleSuggestion()" style="width:100%;padding:13px;margin-bottom:14px;background:rgba(168,85,247,0.12);color:#C084FC;border:1.5px solid #A855F7;border-radius:14px;font-family:var(--font-title);font-size:14px;font-weight:700;cursor:pointer">🎯 Suggérer ma séance Haut</button>
+    <div id="muscu-suggest" style="display:none;background:#15151F;border-radius:16px;border:1px solid #A855F744;padding:18px;margin-bottom:14px">
+      <div style="font-size:10px;color:#C084FC;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Séance Haut · 6 exercices</div>
+      <div id="suggest-desc" style="font-size:11px;color:var(--text3);margin-bottom:12px"></div>
+      <div class="sub-tabs" id="suggest-modes" style="margin-bottom:14px">
+        <div class="sub-tab" onclick="setSuggestMode('frequence',this)">Fréquence</div>
+        <div class="sub-tab" onclick="setSuggestMode('performance',this)">Performance</div>
+        <div class="sub-tab active" onclick="setSuggestMode('mixte',this)">Mixte</div>
+      </div>
+      <div id="muscu-suggest-liste"></div>
+    </div>
+
     <!-- Graphique évolution -->
     <div style="background:#15151F;border-radius:16px;border:1px solid #1E1E2E;padding:18px;margin-bottom:14px">
       <div style="font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">Évolution · poids soulevé</div>
@@ -1217,6 +1230,150 @@ function afficherEvolution() {
     }
   });
 }
+// ── SUGGESTION DE SÉANCE (zone Haut) ──────────────────────
+const SUGGEST_ZONE = "Haut";
+const SUGGEST_NB   = 6;
+let suggestMode    = "mixte";   // "frequence" | "performance" | "mixte"
+
+const SUGGEST_DESC = {
+  frequence   : "Priorité aux exercices faits le moins récemment et le moins souvent (30 derniers jours).",
+  performance : "Priorité aux exercices qui stagnent, reculent ou ont été ressentis comme difficiles.",
+  mixte       : "Mélange : 60 % fréquence + 40 % performance.",
+};
+
+function parseDateFR(s) {
+  const p = String(s).split("/");
+  return p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : null;
+}
+
+function toggleSuggestion() {
+  const panel = document.getElementById('muscu-suggest');
+  const ouvert = panel.style.display === 'block';
+  panel.style.display = ouvert ? 'none' : 'block';
+  if (!ouvert) afficherSuggestion();
+}
+
+function setSuggestMode(mode, el) {
+  suggestMode = mode;
+  document.querySelectorAll('#suggest-modes .sub-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  afficherSuggestion();
+}
+
+// Analyse un exercice : ancienneté, fréquence, tendance de performance, ressenti
+function analyserExercice(exo) {
+  const aujourdhui = new Date(); aujourdhui.setHours(0,0,0,0);
+
+  const hist = allMusculation
+    .filter(m => m.zone === SUGGEST_ZONE && m.exercice === exo && parseDateFR(m.date))
+    .map(m => ({ ...m, d: parseDateFR(m.date) }))
+    .sort((a, b) => b.d - a.d);            // du plus récent au plus ancien
+
+  // Jamais fait → priorité maximale
+  if (!hist.length) {
+    return { exo, jamais:true, jours:null, nb30:0, last:null, tendance:"inconnue",
+             scoreFreq:100, scorePerf:70, conseils:["🆕 Jamais fait — à tester"] };
+  }
+
+  const last  = hist[0];
+  const jours = Math.round((aujourdhui - last.d) / 86400000);
+  const nb30  = hist.filter(h => (aujourdhui - h.d) / 86400000 <= 30).length;
+
+  // ── Score fréquence (0-100) : ancienneté (70 %) + rareté sur 30 j (30 %)
+  const scoreFreq = Math.min(Math.max(jours, 0), 45) / 45 * 70 + Math.max(0, 4 - nb30) / 4 * 30;
+
+  // ── Tendance de performance : dernière saisie vs moyenne des 2 précédentes
+  const charge = h => parseFloat(h.poids) || 0;
+  const volume = h => (parseFloat(h.series) || 0) * (parseFloat(h.repetitions) || 0) * charge(h);
+
+  let tendance = "inconnue", scorePerf = 50;
+  if (hist.length >= 2) {
+    const prev    = hist.slice(1, 3);
+    const dCharge = charge(last) - prev.reduce((s, h) => s + charge(h), 0) / prev.length;
+    const dVol    = volume(last) - prev.reduce((s, h) => s + volume(h), 0) / prev.length;
+    const egal    = Math.abs(dCharge) <= 0.01;
+
+    if      (dCharge > 0.01  || (egal && dVol >  0.01)) { tendance = "progresse"; scorePerf = 25; }
+    else if (dCharge < -0.01 || (egal && dVol < -0.01)) { tendance = "recule";    scorePerf = 90; }
+    else                                                { tendance = "stagne";    scorePerf = 75; }
+  }
+
+  // Ressenti : dernière séance difficile → l'exercice mérite de l'attention
+  const notes    = hist.slice(0, 2).map(h => parseInt(h.note) || 0).filter(n => n > 0);
+  const lastNote = parseInt(last.note) || 0;
+  if (lastNote > 0 && lastNote <= 2) scorePerf = Math.min(100, scorePerf + 10);
+
+  // ── Conseils affichés
+  const conseils = [];
+  if (lastNote > 0 && lastNote <= 2)                         conseils.push("⚠️ Dernière séance difficile : garde ou baisse la charge");
+  else if (notes.length === 2 && notes.every(n => n >= 4) && tendance !== "progresse")
+                                                             conseils.push("💡 Facile 2 fois de suite : tu peux augmenter la charge");
+  if (tendance === "recule")        conseils.push("📉 Charge en baisse");
+  else if (tendance === "stagne")   conseils.push("➡️ Stagne depuis la dernière séance");
+  else if (tendance === "progresse")conseils.push("📈 En progression");
+
+  return { exo, jamais:false, jours, nb30, last, tendance, scoreFreq, scorePerf, conseils };
+}
+
+function scoreSuggestion(a) {
+  if (suggestMode === "frequence")   return a.scoreFreq;
+  if (suggestMode === "performance") return a.scorePerf;
+  return 0.6 * a.scoreFreq + 0.4 * a.scorePerf;
+}
+
+function afficherSuggestion() {
+  const conteneur = document.getElementById('muscu-suggest-liste');
+  document.getElementById('suggest-desc').textContent = SUGGEST_DESC[suggestMode];
+
+  const exos = allExercices[SUGGEST_ZONE] || [];
+  if (!exos.length) {
+    conteneur.innerHTML = '<div class="loading">Aucun exercice « ' + SUGGEST_ZONE + ' » dans la feuille Exercice</div>';
+    return;
+  }
+
+  const SMILEYS = { 1:"😫", 2:"😕", 3:"😐", 4:"😊", 5:"😄" };
+  const top = exos
+    .map(analyserExercice)
+    .map(a => ({ ...a, score: scoreSuggestion(a) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, SUGGEST_NB);
+
+  conteneur.innerHTML = top.map((a, i) => {
+    let quand;
+    if (a.jamais)            quand = "Jamais fait";
+    else if (a.jours <= 0)   quand = "Fait aujourd'hui";
+    else if (a.jours === 1)  quand = "Fait hier";
+    else                     quand = `Fait il y a ${a.jours} jours`;
+
+    const freq = a.jamais ? "" : ` · ${a.nb30}× ces 30 jours`;
+
+    let derniere = "";
+    if (a.last) {
+      const note = parseInt(a.last.note) || 0;
+      const parts = [
+        a.last.series      && a.last.repetitions ? `${a.last.series}×${a.last.repetitions}` : "",
+        a.last.poids       ? `${a.last.poids} kg` : "",
+        note > 0           ? SMILEYS[note] : "",
+      ].filter(Boolean);
+      if (parts.length) derniere = `<div style="font-size:12px;color:#aaa;margin-top:4px">Dernière : ${parts.join(" · ")}</div>`;
+    }
+
+    const conseils = a.conseils.slice(0, 2)
+      .map(c => `<div style="font-size:11px;color:#C084FC;margin-top:4px">${c}</div>`).join("");
+
+    return `
+    <div style="display:flex;gap:12px;align-items:flex-start;background:#0A0A0F;border-radius:12px;border-left:3px solid #A855F7;padding:12px 14px;margin-bottom:8px">
+      <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:rgba(168,85,247,0.2);color:#C084FC;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center">${i + 1}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Georgia',serif;font-size:15px;font-weight:700;color:#F0F0F5">${a.exo}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${quand}${freq}</div>
+        ${derniere}
+        ${conseils}
+      </div>
+    </div>`;
+  }).join("");
+}
+
 function setMuscuTab(zone, el) {
   muscuTabActif = zone;
   document.querySelectorAll('#muscu-tabs .sub-tab').forEach(t => t.classList.remove('active'));
@@ -1318,6 +1475,9 @@ function afficherBilanPage() {
 function afficherMusculation() {
   // Remplir les zones du graphique évolution
   remplirEvoZones();
+
+  // Mettre à jour la suggestion de séance si elle est ouverte
+  if (document.getElementById('muscu-suggest').style.display === 'block') afficherSuggestion();
 
   let list = [...allMusculation].sort((a,b) => {
     const da = a.date.split("/").reverse().join("-");

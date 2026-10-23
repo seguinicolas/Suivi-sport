@@ -1827,4 +1827,147 @@ function afficherPage(page) {
   if (page === "bilan")       afficherBilanPage();
 }
 
-function setSubTab(e
+function setSubTab(el, page, sub) {
+  el.closest('.sub-tabs').querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  subActif[page] = sub;
+  afficherPage(page);
+}
+
+// ── MENU ──────────────────────────────────────────────────
+function toggleMenu() {
+  menuOuvert = !menuOuvert;
+  document.getElementById('hamburger').classList.toggle('open', menuOuvert);
+  document.getElementById('menuDrawer').classList.toggle('open', menuOuvert);
+  document.getElementById('menuOverlay').classList.toggle('open', menuOuvert);
+}
+function closeMenu() {
+  menuOuvert = false;
+  document.getElementById('hamburger').classList.remove('open');
+  document.getElementById('menuDrawer').classList.remove('open');
+  document.getElementById('menuOverlay').classList.remove('open');
+}
+
+// ── MODAL ─────────────────────────────────────────────────
+function ouvrirModal() {
+  modePoids = (pageActive === 'poids');
+  modeMuscu = (pageActive === 'musculation');
+
+  document.getElementById('form-sport-content').style.display  = (!modePoids && !modeMuscu) ? 'block' : 'none';
+  document.getElementById('form-poids-content').style.display  = modePoids  ? 'block' : 'none';
+  document.getElementById('form-muscu-content').style.display  = modeMuscu  ? 'block' : 'none';
+
+  if (modeMuscu) {
+    document.getElementById('modal-title').textContent = '💪 Nouvel exercice';
+    document.getElementById('form-muscu-date').value = new Date().toISOString().split('T')[0];
+    remplirZones();
+  } else if (modePoids) {
+    document.getElementById('modal-title').textContent = '⚖️ Ajouter un poids';
+    document.getElementById('form-poids-date').value = new Date().toISOString().split('T')[0];
+  } else {
+    document.getElementById('modal-title').textContent = '➕ Nouvelle session';
+    document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
+    updateFormType();
+  }
+  document.getElementById('modal').classList.add('open');
+}
+function fermerModal() { document.getElementById('modal').classList.remove('open'); }
+
+function updateFormType() {
+  const activite = document.getElementById('form-activite').value;
+  const types = {
+    "Vélo":          [{v:"Entrainement",l:"Entrainement"},{v:"Fractionné",l:"Fractionné"}],
+    "Course à pied": [{v:"Entrainement",l:"Classique"},{v:"Fractionné",l:"Fractionné"},{v:"Entrainement",l:"Tapis / Salle"}],
+    "Elliptique":    [{v:"Entrainement",l:"Entrainement"}],
+    "Rameur":        [{v:"Entrainement",l:"Entrainement"},{v:"Fractionné",l:"Fractionné"}],
+    "Stepper":       [{v:"Entrainement",l:"Entrainement"}],
+  };
+  document.getElementById('form-type').innerHTML = (types[activite]||[]).map(t=>`<option value="${t.v}">${t.l}</option>`).join('');
+  document.getElementById('form-metric-label').textContent = activite === "Course à pied" ? "Pace (/km)" : "Vitesse (km/h)";
+  document.getElementById('form-metric').placeholder = activite === "Course à pied" ? "5'30\"" : "28.5";
+}
+
+async function sauvegarder() {
+  const btn = document.getElementById('btn-save');
+  btn.textContent = "Enregistrement...";
+  btn.disabled = true;
+
+  try {
+    if (modeMuscu) {
+      const date     = document.getElementById('form-muscu-date').value;
+      const zone     = document.getElementById('form-muscu-zone').value;
+      const exercice = document.getElementById('form-muscu-exercice').value;
+      const series   = document.getElementById('form-muscu-series').value;
+      const reps     = document.getElementById('form-muscu-reps').value;
+      const poids    = document.getElementById('form-muscu-poids').value;
+      const notes    = document.getElementById('form-muscu-notes').value;
+
+      const note     = document.getElementById('form-muscu-note').value;
+
+      if (!date || !zone || !exercice) { alert("Remplis la date, la zone et l'exercice !"); return; }
+      if (!series || !reps || !poids)  { alert("Remplis les séries, les répétitions et le poids !"); return; }
+      if (!note || note === "0")       { signalerRessentiManquant(); alert("Choisis ton ressenti (smiley) !"); return; }
+
+      const params = new URLSearchParams({ action:"addMusculation", date, zone, exercice, series, repetitions:reps, poids, notes, note });
+      const resp   = await fetch(`${API_URL}?${params}`);
+      const json   = await resp.json();
+      if (json.error) throw new Error(json.error);
+
+      fermerModal();
+      await chargerDonnees();
+
+    } else if (modePoids) {
+      const val   = document.getElementById('form-poids-val').value;
+      const date  = document.getElementById('form-poids-date').value;
+      const notes = document.getElementById('form-poids-notes').value;
+      if (!val || !date) { alert("Remplis la date et le poids !"); return; }
+      const url  = `${API_URL}?action=addPoids&date=${encodeURIComponent(date)}&valeur=${val}&notes=${encodeURIComponent(notes)}`;
+      const resp = await fetch(url);
+      const json = await resp.json();
+      if (json.error) throw new Error(json.error);
+      fermerModal();
+      await chargerDonnees();
+
+    } else {
+      const km   = document.getElementById('form-km').value;
+      const date = document.getElementById('form-date').value;
+      if (!date || !km) { alert("Remplis au moins la date et la distance !"); return; }
+      const params = new URLSearchParams({
+        action       : "addEntry",
+        activite     : document.getElementById('form-activite').value,
+        type         : document.getElementById('form-type').value,
+        date,
+        duree        : document.getElementById('form-duree').value,
+        km,
+        bpm          : document.getElementById('form-bpm').value,
+        metric       : document.getElementById('form-metric').value,
+        ressenti     : document.getElementById('form-ressenti').value,
+        notes        : document.getElementById('form-notes').value,
+      });
+      const resp = await fetch(`${API_URL}?${params}`);
+      const json = await resp.json();
+      if (json.error) throw new Error(json.error);
+      fermerModal();
+      await chargerDonnees();
+    }
+  } catch(e) {
+    alert("Erreur : " + e.message);
+  } finally {
+    btn.textContent = "Enregistrer";
+    btn.disabled = false;
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  updateFormType();
+  // Activer le bon bouton année
+  document.querySelectorAll('.year-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.textContent) === anneeActive);
+  });
+  chargerDonnees();
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+});
+</script>
+</body>
+</html>

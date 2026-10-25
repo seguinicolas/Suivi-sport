@@ -661,6 +661,11 @@
         </select>
       </div>
 
+      <!-- Rappel : photo de la machine manquante -->
+      <div id="muscu-photo-rappel" style="display:none;background:rgba(255,215,0,0.08);border:1px solid #FFD70066;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#FFD700">
+        📸 N'oublie pas de prendre en photo l'étiquette de cette machine !
+      </div>
+
       <!-- Dernière saisie de l'exercice -->
       <div id="muscu-last" style="display:none;background:var(--bg);border:1px solid var(--border2);border-left:3px solid var(--purple);border-radius:10px;padding:10px 14px;margin-bottom:14px"></div>
 
@@ -717,6 +722,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbxLF-KKeKfnNyqdjX55RohU
 let allData       = [];
 let allPoids      = [];
 let allExercices  = {};
+let allPhotos      = {};   // exercice -> true si la photo de la machine existe
 let allMusculation = [];
 let pageActive    = "general";
 let subActif      = { velo:"all", course:"all", autre:"all" };
@@ -770,6 +776,7 @@ async function chargerDonnees() {
     allData        = json.activites    || [];
     allPoids       = json.poids        || [];
     allExercices   = json.exercices    || {};
+    allPhotos      = json.photos       || {};
     allMusculation = json.musculation  || [];
     afficherGeneral();
     afficherPage(pageActive);
@@ -1631,6 +1638,10 @@ function afficherDerniereSaisie() {
   // Graphique d'évolution 6 mois
   afficherEvolutionForm(zone, exo);
 
+  // Rappel photo : seulement si l'exercice est connu et sans photo
+  document.getElementById('muscu-photo-rappel').style.display =
+    (zone && exo && Object.prototype.hasOwnProperty.call(allPhotos, exo) && allPhotos[exo] === false) ? 'block' : 'none';
+
   const inpSeries = document.getElementById('form-muscu-series');
   const inpReps   = document.getElementById('form-muscu-reps');
   const inpPoids  = document.getElementById('form-muscu-poids');
@@ -1692,6 +1703,7 @@ function remplirZones() {
   document.getElementById('form-muscu-exercice').innerHTML = '<option value="">-- Choisir une zone d\'abord --</option>';
   document.getElementById('muscu-last').style.display = 'none';
   afficherEvolutionForm("", "");
+  document.getElementById('muscu-photo-rappel').style.display = 'none';
 
   // Repartir proprement à chaque ouverture de la modal
   document.getElementById('form-muscu-series').value = "";
